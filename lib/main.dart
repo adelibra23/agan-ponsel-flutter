@@ -157,8 +157,7 @@ Future<List<String>?> entry(BuildContext context,String title,List<String> label
 class CustomersPage extends StatefulWidget { const CustomersPage({super.key}); @override State<CustomersPage> createState()=>_CustomersPageState(); }
 class _CustomersPageState extends State<CustomersPage> {
   Future<void> add() async { final v=await entry(context,'Pelanggan Baru',['Nama','Nomor HP','Catatan']); if(v==null||v[0].isEmpty)return;await (await Store.db).insert('customers',{'name':v[0],'phone':v[1],'note':v[2]});setState((){}); }
-  @override Widget build(BuildContext context)=>PageShell(title:'Pelanggan',fab:FloatingActionButton(onPressed:add,child:const Icon(Icons.add)),child:FutureBuilder<List<Map<String,Object?>>>(future:Store.db.then((d)=>d.query('customers',orderBy:'id DESC')),builder:(c,s)=>!s.hasData?const Center(child:CircularProgressIndicator()):ListView(children:[for(final x in s.data!) Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.person)),title:Text('${x['name']}'),subtitle:Text('${x['phone']}
-${x['note']}'),isThreeLine:true))])));
+  @override Widget build(BuildContext context)=>PageShell(title:'Pelanggan',fab:FloatingActionButton(onPressed:add,child:const Icon(Icons.add)),child:FutureBuilder<List<Map<String,Object?>>>(future:Store.db.then((d)=>d.query('customers',orderBy:'id DESC')),builder:(c,s)=>!s.hasData?const Center(child:CircularProgressIndicator()):ListView(children:[for(final x in s.data!) Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.person)),title:Text('${x['name']}'),subtitle:Text('${x['phone']}\n${x['note']}'),isThreeLine:true))])));
 }
 class ExpensesPage extends StatefulWidget { const ExpensesPage({super.key}); @override State<ExpensesPage> createState()=>_ExpensesPageState(); }
 class _ExpensesPageState extends State<ExpensesPage> {
