@@ -10,12 +10,17 @@ import '../widgets/kit.dart';
 import 'pos.dart';
 import 'settings/settings_pages.dart';
 import 'security/pin_screens.dart';
+import 'receivables.dart';
+import 'app_templates.dart';
 
 class MoreScreen extends StatelessWidget {
   final ValueChanged<Widget> open;
   final bool dark;
   final ValueChanged<bool> onThemeChanged;
-  const MoreScreen({super.key, required this.open, required this.dark, required this.onThemeChanged});
+  final String template;
+  final ValueChanged<String> onTemplateChanged;
+  const MoreScreen({super.key, required this.open, required this.dark, required this.onThemeChanged,
+    required this.template, required this.onTemplateChanged});
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -23,10 +28,19 @@ class MoreScreen extends StatelessWidget {
       const PageIntro('Manajemen Toko', 'Fitur tambahan untuk operasional AGAN PONSEL'),
       _MenuItem(icon: Icons.people_alt_rounded, color: const Color(0xFF7D50D6),
         title: 'Pelanggan & Kontak', subtitle: 'Input manual atau pilih dari kontak HP', onTap: () => open(const CustomersScreen())),
+      _MenuItem(icon: Icons.receipt_long_rounded, color: const Color(0xFFB75B3D),
+        title: 'Piutang & Jatuh Tempo', subtitle: 'Cicilan, pelunasan dan pengingat',
+        onTap: () => open(const ReceivablesScreen())),
+      _MenuItem(icon: Icons.notifications_active_rounded, color: const Color(0xFFCB8126),
+        title: 'Pusat Pengingat', subtitle: 'Tagihan terlambat dan segera jatuh tempo',
+        onTap: () => open(const ReminderCenterScreen())),
+      _MenuItem(icon: Icons.palette_rounded, color: const Color(0xFF7158BE),
+        title: 'Template Aplikasi', subtitle: 'Warna aplikasi dan pesan pengingat',
+        onTap: () => open(AppTemplatesScreen(currentStyle: template, onStyleChanged: onTemplateChanged))),
       _MenuItem(icon: Icons.account_balance_wallet_rounded, color: const Color(0xFF1F68D7),
         title: 'Saldo & Kas Toko', subtitle: 'Saldo kas, setoran dan penarikan manual', onTap: () => open(const CashScreen())),
       _MenuItem(icon: Icons.task_alt_rounded, color: const Color(0xFF4B78A8),
-        title: 'Catatan & Tugas', subtitle: 'Checklist kegiatan toko offline', onTap: () => open(const StoreNotesScreen())),
+        title: 'Catatan & Tugas', subtitle: 'Checklist kegiatan toko', onTap: () => open(const StoreNotesScreen())),
       _MenuItem(icon: Icons.notification_important_outlined, color: const Color(0xFFDD8517),
         title: 'Stok Menipis', subtitle: 'Pantau produk di bawah batas minimum',
         onTap: () => open(const InventoryScreen(lowOnly: true))),
@@ -44,7 +58,7 @@ class MoreScreen extends StatelessWidget {
         title: 'Keamanan & Biometrik', subtitle: 'PIN, wajah atau sidik jari Android',
         onTap: () => open(const PinSettingsScreen())),
       _MenuItem(icon: Icons.account_circle_outlined, color: const Color(0xFF2783DC),
-        title: 'Akun & Profil', subtitle: 'Identitas pengelola dan toko offline',
+        title: 'Akun & Profil', subtitle: 'Identitas pengelola dan toko',
         onTap: () => open(const AccountSettingsScreen())),
       _MenuItem(icon: Icons.backup_rounded, color: const Color(0xFF8054CB),
         title: 'Backup & Restore', subtitle: 'Simpan data SQLite, pulihkan saat ganti HP',
@@ -54,16 +68,14 @@ class MoreScreen extends StatelessWidget {
         onTap: () => open(const BluetoothPrinterScreen())),
       _MenuItem(icon: Icons.settings_suggest_rounded, color: const Color(0xFF697E94),
         title: 'Pengaturan', subtitle: 'Tampilan, keamanan, printer dan logo toko',
-        onTap: () => open(SettingsScreen(dark: dark, onThemeChanged: onThemeChanged))),
+        onTap: () => open(SettingsScreen(dark: dark, onThemeChanged: onThemeChanged,
+          template: template, onTemplateChanged: onTemplateChanged))),
       const SizedBox(height: 18),
       Surface(child: Row(children: [
-        const Icon(Icons.offline_bolt_rounded, color: Color(0xFF09B681)),
+        const Icon(Icons.verified_user_rounded, color: Color(0xFF09B681)),
         const SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Offline-first', style: TextStyle(fontWeight: FontWeight.w900)),
-          Text('Tidak memerlukan server komputer',
-            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        ])),
+        Expanded(child: Text('Data toko tersimpan aman di perangkat. Buat backup secara rutin.',
+          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))),
       ])),
     ],
   );
@@ -295,7 +307,7 @@ class _DigitalScreenState extends State<DigitalScreen> {
     final result = await showAppSheet<(String, String, int, int)>(context,
       StatefulBuilder(builder: (ctx, update) => Column(
         mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('Transaksi Digital Offline', style: Theme.of(ctx).textTheme.titleLarge),
+          Text('Transaksi Digital', style: Theme.of(ctx).textTheme.titleLarge),
           const SizedBox(height: 6),
           Text('Pencatatan saja, tidak mengirim pulsa / uang otomatis.',
             style: TextStyle(fontSize: 12, color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
@@ -346,7 +358,7 @@ class _DigitalScreenState extends State<DigitalScreen> {
         Surface(child: Row(children: [
           const Icon(Icons.info_outline_rounded, color: brandBlue),
           const SizedBox(width: 10),
-          Expanded(child: Text('Mode pencatatan offline. Transfer dan top up sungguhan perlu koneksi penyedia layanan.',
+          Expanded(child: Text('Pencatatan transaksi. Transfer dan top up sungguhan memerlukan penyedia layanan.',
             style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))),
         ])),
         const SizedBox(height: 16),
@@ -518,7 +530,10 @@ class StockHistoryScreen extends StatelessWidget {
 class SettingsScreen extends StatefulWidget {
   final bool dark;
   final ValueChanged<bool> onThemeChanged;
-  const SettingsScreen({super.key, required this.dark, required this.onThemeChanged});
+  final String template;
+  final ValueChanged<String> onTemplateChanged;
+  const SettingsScreen({super.key, required this.dark, required this.onThemeChanged,
+    required this.template, required this.onTemplateChanged});
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
@@ -546,7 +561,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text('AGAN PONSEL', style: TextStyle(fontWeight: FontWeight.w900,
               fontSize: 21, color: Colors.white)),
             SizedBox(height: 4),
-            Text('Flutter Offline • v0.6.1 Build 10',
+            Text('Flutter • v0.7.0 Build 11',
               style: TextStyle(color: Colors.white70, fontSize: 12)),
           ])),
         ])),
@@ -584,6 +599,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text('Mode Gelap', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w800)),
         subtitle: Text('Tema mengikuti pilihan yang tersimpan', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         value: currentDark, onChanged: changeTheme)),
+      const SizedBox(height: 10),
+      SettingsCard(icon: Icons.palette_rounded, color: const Color(0xFF7555C7),
+        title: 'Template Aplikasi', subtitle: 'Ganti warna header, navigasi dan pesan penagihan',
+        onTap: () => go(AppTemplatesScreen(currentStyle: widget.template,
+          onStyleChanged: widget.onTemplateChanged))),
       const SizedBox(height: 10),
       SettingsCard(icon: Icons.info_outline_rounded, color: const Color(0xFF63748D),
         title: 'Tentang Aplikasi', subtitle: 'Versi, fitur, privasi dan informasi penggunaan',

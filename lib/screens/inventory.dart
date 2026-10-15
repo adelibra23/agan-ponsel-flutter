@@ -239,7 +239,7 @@ class _ProductFormState extends State<_ProductForm> {
       Row(children: [
         const Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF0F8BDB), size: 18),
         const SizedBox(width: 8),
-        Expanded(child: Text('Tip: scan kode pada kemasan, atau buat SKU otomatis. Foto disimpan offline dan ikut dalam backup.',
+        Expanded(child: Text('Tip: scan kode pada kemasan, atau buat SKU otomatis. Foto tersimpan di perangkat dan ikut dalam backup.',
           style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11))),
       ]),
       const SizedBox(height: 19),

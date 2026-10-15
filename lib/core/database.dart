@@ -80,13 +80,14 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
         await _createServiceExtras(db);
         await _createPhotoExtras(db);
         await _createStoreExtras(db);
+        await _createReceivables(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -105,8 +106,36 @@ class AppDatabase {
         if (oldVersion < 6) {
           await _createStoreExtras(db);
         }
+        if (oldVersion < 7) {
+          await _createReceivables(db);
+        }
       },
     );
+  }
+
+  // v7: Piutang terpisah dari kas. Pelunasan dicatat sebagai jurnal pembayaran.
+  static Future<void> _createReceivables(DatabaseExecutor db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS receivables(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_name TEXT NOT NULL,
+      phone TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL,
+      amount INTEGER NOT NULL CHECK(amount > 0),
+      due_date TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      notes TEXT NOT NULL DEFAULT ''
+    )''');
+    await db.execute('''CREATE TABLE IF NOT EXISTS receivable_payments(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      receivable_id INTEGER NOT NULL,
+      amount INTEGER NOT NULL CHECK(amount > 0),
+      method TEXT NOT NULL DEFAULT 'Tunai',
+      paid_at TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      FOREIGN KEY(receivable_id) REFERENCES receivables(id)
+    )''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_receivables_due ON receivables(due_date)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_receivable_payments_parent ON receivable_payments(receivable_id)');
   }
 
   static Future<void> _createBase(DatabaseExecutor db) async {
@@ -417,7 +446,7 @@ class AppDatabase {
     )''');
   }
 
-  /// Estimated cash-on-hand recorded by this offline app. No bank sync.
+  /// Estimated cash-on-hand recorded by this app. No bank sync.
   /// Older one-item sales and service deposits have unknown payment methods,
   /// so they are deliberately not counted as cash.
   static Future<int> cashBalance() async {
@@ -426,9 +455,11 @@ class AppDatabase {
       'SELECT COALESCE(SUM(delta),0) FROM cash_adjustments')) ?? 0;
     final received = Sqflite.firstIntValue(await db.rawQuery(
       "SELECT COALESCE(SUM(total),0) FROM receipts WHERE payment='Tunai'")) ?? 0;
+    final receivableCash = Sqflite.firstIntValue(await db.rawQuery(
+      "SELECT COALESCE(SUM(amount),0) FROM receivable_payments WHERE method='Tunai'")) ?? 0;
     final expenses = Sqflite.firstIntValue(await db.rawQuery(
       'SELECT COALESCE(SUM(amount),0) FROM expenses')) ?? 0;
-    return deposits + received - expenses;
+    return deposits + received + receivableCash - expenses;
   }
 
   static Future<void> adjustCash(int delta, String note) async {

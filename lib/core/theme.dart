@@ -4,9 +4,29 @@ const brandBlue = Color(0xFF0756E8);
 const brandCyan = Color(0xFF00BEF5);
 const brandNavy = Color(0xFF0C1936);
 
+
+/// Preset tampilan. Bisa diganti tanpa mengubah tema terang/gelap.
+const appTemplates = <String>['Biru Orbit', 'Midnight', 'Emerald', 'Sunset'];
+Color templateAccent(String name) {
+  switch (name) {
+    case 'Midnight': return const Color(0xFF5368E7);
+    case 'Emerald': return const Color(0xFF008D78);
+    case 'Sunset': return const Color(0xFFDC643A);
+    default: return brandBlue;
+  }
+}
+List<Color> templateGradient(String name) {
+  switch (name) {
+    case 'Midnight': return const [Color(0xFF191953), Color(0xFF3843A4), Color(0xFF7671E6)];
+    case 'Emerald': return const [Color(0xFF074D52), Color(0xFF087E79), Color(0xFF0FBDA2)];
+    case 'Sunset': return const [Color(0xFF7A2959), Color(0xFFCA4C51), Color(0xFFF7A44B)];
+    default: return const [Color(0xFF052B8C), Color(0xFF075FD4), Color(0xFF02A0F0)];
+  }
+}
+
 /// Theme roles deliberately use contrasting foreground/background colors.
 /// Never use white text on a regular surface; reserve white for brand gradients.
-ThemeData aganTheme(Brightness brightness) {
+ThemeData aganTheme(Brightness brightness, {String template = 'Biru Orbit'}) {
   final dark = brightness == Brightness.dark;
   final background = dark ? const Color(0xFF0D1522) : const Color(0xFFF5F8FD);
   final surface = dark ? const Color(0xFF192538) : Colors.white;
@@ -15,10 +35,10 @@ ThemeData aganTheme(Brightness brightness) {
   final outline = dark ? const Color(0xFF40516A) : const Color(0xFFDDE6F2);
 
   final scheme = ColorScheme.fromSeed(
-    seedColor: brandBlue,
+    seedColor: templateAccent(template),
     brightness: brightness,
   ).copyWith(
-    primary: dark ? const Color(0xFF91B9FF) : brandBlue,
+    primary: dark ? Color.lerp(templateAccent(template), Colors.white, .42)! : templateAccent(template),
     onPrimary: dark ? const Color(0xFF062251) : Colors.white,
     surface: surface,
     onSurface: foreground,

@@ -39,7 +39,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
         onPressed: () => controller.toggleTorch())]),
     body: SafeArea(child: Column(children: [
       const Padding(padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
-        child: Text('Arahkan kamera ke barcode pada kemasan. Semua pemindaian berjalan offline.',
+        child: Text('Arahkan kamera ke barcode pada kemasan. Pemindaian langsung melalui kamera.',
           textAlign: TextAlign.center, style: TextStyle(color: Colors.white70))),
       Expanded(child: Padding(padding: const EdgeInsets.all(18), child: ClipRRect(
         borderRadius: BorderRadius.circular(26),

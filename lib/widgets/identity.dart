@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/theme.dart';
 import 'store_logo.dart';
+import '../services/receivables_service.dart';
 
 class AnimatedBrandMark extends StatefulWidget {
   final double size;
@@ -62,17 +63,18 @@ class _OrbitPainter extends CustomPainter {
 class BrandHeader extends StatelessWidget {
   final String section;
   final String subheading;
+  final String template;
   final VoidCallback onSearch;
   final VoidCallback onAlerts;
   final VoidCallback onScan;
-  const BrandHeader({super.key, required this.section, required this.subheading,
+  const BrandHeader({super.key, required this.section, required this.subheading, required this.template,
     required this.onSearch, required this.onAlerts, required this.onScan});
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFF052B8C), Color(0xFF075FD4), Color(0xFF02A0F0)]),
+        colors: templateGradient(template)),
       borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
     ),
     child: Stack(children: [
@@ -93,7 +95,7 @@ class BrandHeader extends StatelessWidget {
             const Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.circle, size: 6, color: Color(0xFF5BFFBD)),
               SizedBox(width: 5),
-              Text('OFFLINE • TOKO DIGITAL', style: TextStyle(color: Colors.white70,
+              Text('TOKO DIGITAL • AGAN PONSEL', style: TextStyle(color: Colors.white70,
                 fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .45)),
             ]),
           ])),
@@ -101,7 +103,15 @@ class BrandHeader extends StatelessWidget {
           const SizedBox(width: 2),
           _HeaderButton(icon: Icons.search_rounded, onPressed: onSearch),
           const SizedBox(width: 2),
-          _HeaderButton(icon: Icons.notifications_none_rounded, onPressed: onAlerts),
+          FutureBuilder<ReceivableSummary>(
+            future: ReceivablesService.summary(), builder: (context, snap) {
+              final count = snap.data?.alertCount ?? 0;
+              return Badge(
+                isLabelVisible: count > 0,
+                label: Text(count > 99 ? '99+' : '$count'),
+                child: _HeaderButton(icon: Icons.notifications_none_rounded, onPressed: onAlerts),
+              );
+            }),
         ]),
         const SizedBox(height: 12),
         Row(children: [
@@ -165,7 +175,8 @@ class AnimatedBottomBar extends StatelessWidget {
               curve: Curves.easeOutCubic, height: 34, width: active ? 55 : 42,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                gradient: active ? const LinearGradient(colors: [brandBlue, Color(0xFF12A7F3)]) : null,
+                gradient: active ? LinearGradient(colors: [Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primary.withValues(alpha: .8)]) : null,
                 color: active ? null : Colors.transparent,
                 boxShadow: active ? [BoxShadow(color: brandBlue.withOpacity(.22), blurRadius: 10, offset: const Offset(0, 4))] : null,
               ),
@@ -178,7 +189,7 @@ class AnimatedBottomBar extends StatelessWidget {
             const SizedBox(height: 4),
             Text(labels[i], maxLines: 1, style: TextStyle(
               fontSize: 10, fontWeight: active ? FontWeight.w900 : FontWeight.w600,
-              color: active ? (dark ? const Color(0xFF7BAEFF) : brandBlue) : Theme.of(context).colorScheme.onSurfaceVariant)),
+              color: active ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant)),
           ]),
         ));
       }))),

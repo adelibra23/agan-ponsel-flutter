@@ -1,28 +1,17 @@
-AGAN PONSEL Flutter v0.6.1 Build 10
-================================
+AGAN PONSEL Flutter v0.7.0 Build 11
 
-1. Simpan AGAN-PONSEL-Flutter-v0.6.1-Build10.zip di folder Download Android.
-
-2. Masuk ke Termux. Perintah dijalankan satu per satu:
+1. Unduh AGAN-PONSEL-Flutter-v0.7.0-Build11.zip ke folder Download Android.
+2. Buka Termux, jalankan perintah SATU PER SATU:
 
 cd ~/agan-build/agan_ponsel_flutter
-
-unzip -o "/sdcard/Download/AGAN-PONSEL-Flutter-v0.6.1-Build10.zip"
-
-git status --short
-
+unzip -o "/sdcard/Download/AGAN-PONSEL-Flutter-v0.7.0-Build11.zip"
 git add lib pubspec.yaml scripts test .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt
-
-git commit -m "AGAN PONSEL Flutter v0.6.1 Build10"
-
+git commit -m "AGAN PONSEL Flutter v0.7.0 Build11"
 git push origin main
 
-3. GitHub Actions:
-https://github.com/adelibra23/agan-ponsel-flutter/actions
+3. Buka https://github.com/adelibra23/agan-ponsel-flutter/actions
+4. Setelah build hijau, unduh artifact AGAN-PONSEL-v0.7.0-Build11-APK.
+5. Backup data dari aplikasi sebelum update. Jangan uninstall aplikasi lama.
+6. Update APK memerlukan applicationId dan signature yang sama seperti APK terpasang.
 
-4. Bila build sukses, unduh artifact AGAN-PONSEL-v0.6.1-Build10-APK.
-
-Jika Termux belum diberi izin akses penyimpanan, jalankan termux-setup-storage.
-Jika git push gagal dengan Could not resolve host, periksa koneksi dan ulangi git push; tidak perlu git commit ulang.
-
-JANGAN uninstall aplikasi berisi transaksi penting sebelum membuat backup. Pastikan package ID dan sertifikat penandatanganan APK sama untuk upgrade yang mempertahankan data lama.
+Pengingat piutang muncul dalam aplikasi, belum muncul sebagai notifikasi Android ketika aplikasi tertutup.

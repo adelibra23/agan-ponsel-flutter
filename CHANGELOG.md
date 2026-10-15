@@ -1,3 +1,14 @@
+# AGAN PONSEL Flutter v0.7.0 Build 11
+
+- ADD: Piutang & Jatuh Tempo, reminder center, riwayat cicilan, pelunasan.
+- ADD: Template tampilan (Biru Orbit, Midnight, Emerald, Sunset), pesan penagihan.
+- ADD: Notifikasi angka jatuh tempo pada header, kartu ringkasan piutang di Beranda.
+- UI: Splash AG Orbit Motion dengan halo animasi dan transisi logo.
+- UI: Kata offline hanya tampil di Tentang Aplikasi.
+- DATA: Skema SQLite versi 7, migrasi aditif; backup & restore piutang dan preferensi tema.
+- CASH: Cicilan Tunai masuk ke estimasi saldo kas (transfer/e-wallet dikecualikan).
+- REMINDER: Ditampilkan di aplikasi ketika dibuka, belum push notification di background.
+
 # AGAN PONSEL Flutter — Changelog
 
 ## v0.6.1 Build 10 — Contrast & Dashboard Polish

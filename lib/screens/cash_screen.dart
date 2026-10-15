@@ -87,7 +87,7 @@ class _BalanceCardState extends State<BalanceCard> {
                     fontSize: 27, letterSpacing: -.8, fontWeight: FontWeight.w900)))),
             const SizedBox(height: 9),
             Row(children: [
-              const Expanded(child: Text('Buku kas offline • hanya data tercatat',
+              const Expanded(child: Text('Buku kas • berdasarkan transaksi tercatat',
                 style: TextStyle(color: Color(0xFFDAECFF), fontSize: 10.5))),
               TextButton.icon(onPressed: widget.onOpen,
                 style: TextButton.styleFrom(
@@ -221,7 +221,7 @@ class _CashScreenState extends State<CashScreen> {
           icon: const Icon(Icons.remove), label: const Text('Kas Keluar'))),
       ]),
       const SizedBox(height: 17),
-      Surface(child: Text('Saldo = penjualan dengan pembayaran Tunai + setoran/penyesuaian − seluruh pengeluaran tercatat. Penjualan lama tanpa metode pembayaran, DP service, transfer, dan saldo rekening tidak otomatis dihitung.',
+      Surface(child: Text('Saldo = penjualan Tunai + pembayaran piutang Tunai + penyesuaian kas − seluruh pengeluaran tercatat. Transfer, e-wallet, DP service dan saldo rekening tidak otomatis dihitung.',
         style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))),
       const SizedBox(height: 11),
       OutlinedButton.icon(onPressed: setDailyTarget,

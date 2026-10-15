@@ -39,3 +39,26 @@ Dart/Flutter, `sqflite` versi skema 6, `flutter_contacts` v1 untuk pembacaan kon
 **Keamanan:** Kunci PIN/biometrik melindungi antarmuka, **tidak mengenkripsi database ataupun backup**. Kontak yang dipilih akan disalin ke SQLite, dan dapat ikut diekspor bersama backup. Jangan membagikan backup mentah secara publik.
 
 **Status:** Pembaruan source sudah dipaketkan dan skrip persiapan Android diuji secara lokal. Kompilasi Flutter serta pengujian perangkat biometrik, kontak, printer dan pemulihan data fisik belum dilakukan dalam sesi ini.
+
+
+## Pembaruan v0.7.0 Build 11
+
+- Piutang pelanggan dengan jatuh tempo, nominal, nomor kontak, catatan dan pencarian.
+- Cicilan parsial, pelunasan, riwayat pembayaran, pilih metode pembayaran.
+- Pusat Pengingat (jatuh tempo hari ini, lewat tempo, dan 3 hari mendatang)
+  ditampilkan saat aplikasi dibuka; **belum menjadwalkan notifikasi sistem saat aplikasi ditutup**.
+- Tombol salin pesan pengingat memakai template Ramah / Formal / Singkat.
+- Empat template tampilan: Biru Orbit, Midnight, Emerald, Sunset. Mode gelap tetap tersedia.
+- Splash AG Orbit Motion dengan efek halo berdenyut dan transisi logo.
+- Teks "offline" dibatasi di halaman Tentang Aplikasi.
+- SQLite migrasi v6 → v7 menambah `receivables` dan `receivable_payments`, tidak menghapus tabel lama.
+- Backup JSON menyertakan kedua tabel piutang dan pilihan template.
+- Pembayaran piutang **Tunai** dicatat sebagai kas masuk. Transfer dan e-wallet tidak menambah saldo kas.
+- Piutang baru tidak otomatis mengurangi stok atau mencatat omzet. Kasir dan Piutang tetap transaksi terpisah.
+
+### Upgrade dari Termux
+Unduh ZIP ke folder Download, buat backup data aplikasi sebelum memperbarui APK.
+Ekstrak ke root repository yang sudah ada, lalu `git add`, `git commit`, dan `git push`.
+Lihat `INSTALL-TERMUX.txt` untuk langkah terinci.
+
+**Status**: source diperiksa statis dan smoke test SQL tersedia; APK baru perlu dikompilasi dan diuji di GitHub Actions.
