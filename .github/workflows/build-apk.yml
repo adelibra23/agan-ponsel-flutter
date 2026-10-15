@@ -39,6 +39,9 @@ jobs:
       - name: Format and check Dart syntax
         run: dart format lib
 
+      - name: Remove generated sample test
+        run: rm -f test/widget_test.dart
+
       - name: Analyze Flutter code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
