@@ -95,11 +95,11 @@ Kamu tidak dapat menjalankan perubahan database lewat jawaban teks; pengguna har
   static Future<String> ask(String prompt, {bool testConnection = false}) async {
     final config = await load();
     if (!testConnection && !config.enabled) {
-      throw const StateError('AI internet belum diaktifkan di Pengaturan API');
+      throw StateError('AI internet belum diaktifkan di Pengaturan API');
     }
     final key = await _vault.read(key: _keySlot(config.provider));
     if (key == null || key.isEmpty) {
-      throw const StateError('API key belum disimpan');
+      throw StateError('API key belum disimpan');
     }
     final normalized = prompt.trim();
     if (normalized.isEmpty || normalized.length > 1200) {
@@ -138,10 +138,10 @@ Kamu tidak dapat menjalankan perubahan database lewat jawaban teks; pengguna har
       final response = await client.post(endpoint, headers: headers,
         body: jsonEncode(body)).timeout(const Duration(seconds: 28));
       if (response.statusCode == 401 || response.statusCode == 403) {
-        throw const StateError('API key ditolak atau tidak memiliki izin. Periksa penyedia AI.');
+        throw StateError('API key ditolak atau tidak memiliki izin. Periksa penyedia AI.');
       }
       if (response.statusCode == 429) {
-        throw const StateError('Kuota AI atau batas permintaan tercapai. Coba lagi nanti.');
+        throw StateError('Kuota AI atau batas permintaan tercapai. Coba lagi nanti.');
       }
       if (response.statusCode >= 400) {
         // Do not display or log potentially sensitive provider response bodies.
@@ -161,12 +161,12 @@ Kamu tidak dapat menjalankan perubahan database lewat jawaban teks; pengguna har
         final message = choices?.isNotEmpty == true ? choices!.first['message'] as Map<String, dynamic>? : null;
         text = '${message?['content'] ?? ''}';
       }
-      if (text.trim().isEmpty) throw const StateError('Model tidak mengembalikan teks. Coba model lain.');
+      if (text.trim().isEmpty) throw StateError('Model tidak mengembalikan teks. Coba model lain.');
       return text.trim();
     } on TimeoutException {
-      throw const StateError('Waktu koneksi AI habis. Periksa internet atau coba lagi.');
+      throw StateError('Waktu koneksi AI habis. Periksa internet atau coba lagi.');
     } on http.ClientException {
-      throw const StateError('Tidak dapat menghubungi layanan AI. Periksa jaringan.');
+      throw StateError('Tidak dapat menghubungi layanan AI. Periksa jaringan.');
     } finally {
       client.close();
     }
