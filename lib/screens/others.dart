@@ -12,6 +12,7 @@ import 'settings/settings_pages.dart';
 import 'security/pin_screens.dart';
 import 'receivables.dart';
 import 'app_templates.dart';
+import 'agana_agent.dart';
 
 class MoreScreen extends StatelessWidget {
   final ValueChanged<Widget> open;
@@ -26,6 +27,9 @@ class MoreScreen extends StatelessWidget {
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.fromLTRB(16, 20, 16, 25), children: [
       const PageIntro('Manajemen Toko', 'Fitur tambahan untuk operasional AGAN PONSEL'),
+      _MenuItem(icon: Icons.auto_awesome_rounded, color: const Color(0xFF7356E9),
+        title: 'AGANA • Asisten Pintar', subtitle: 'Cek tagihan, stok, service dan bantu input data',
+        onTap: () => open(const AganaAgentScreen())),
       _MenuItem(icon: Icons.people_alt_rounded, color: const Color(0xFF7D50D6),
         title: 'Pelanggan & Kontak', subtitle: 'Input manual atau pilih dari kontak HP', onTap: () => open(const CustomersScreen())),
       _MenuItem(icon: Icons.receipt_long_rounded, color: const Color(0xFFB75B3D),
@@ -561,7 +565,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text('AGAN PONSEL', style: TextStyle(fontWeight: FontWeight.w900,
               fontSize: 21, color: Colors.white)),
             SizedBox(height: 4),
-            Text('Flutter • v0.7.0 Build 11',
+            Text('Flutter • v0.8.0 Build 12',
               style: TextStyle(color: Colors.white70, fontSize: 12)),
           ])),
         ])),

@@ -14,6 +14,7 @@ import 'screens/others.dart';
 import 'screens/barcode_scanner.dart';
 import 'screens/security/pin_screens.dart';
 import 'screens/receivables.dart';
+import 'screens/agana_agent.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -119,6 +120,7 @@ class _AppShellState extends State<AppShell> {
           BrandHeader(
             section: titles[selected], subheading: titles[selected],
             onSearch: () => select(2), onAlerts: alerts, onScan: quickScan,
+            onAgent: () => open(const AganaAgentScreen()),
             template: widget.template,
           ),
           Expanded(child: AnimatedSwitcher(

@@ -67,8 +67,9 @@ class BrandHeader extends StatelessWidget {
   final VoidCallback onSearch;
   final VoidCallback onAlerts;
   final VoidCallback onScan;
+  final VoidCallback onAgent;
   const BrandHeader({super.key, required this.section, required this.subheading, required this.template,
-    required this.onSearch, required this.onAlerts, required this.onScan});
+    required this.onSearch, required this.onAlerts, required this.onScan, required this.onAgent});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -99,9 +100,12 @@ class BrandHeader extends StatelessWidget {
                 fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .45)),
             ]),
           ])),
+          _HeaderButton(icon: Icons.auto_awesome_rounded, onPressed: onAgent),
+          const SizedBox(width: 2),
           _HeaderButton(icon: Icons.qr_code_scanner_rounded, onPressed: onScan),
           const SizedBox(width: 2),
-          _HeaderButton(icon: Icons.search_rounded, onPressed: onSearch),
+          if (MediaQuery.sizeOf(context).width >= 395)
+            _HeaderButton(icon: Icons.search_rounded, onPressed: onSearch),
           const SizedBox(width: 2),
           FutureBuilder<ReceivableSummary>(
             future: ReceivablesService.summary(), builder: (context, snap) {

@@ -1,3 +1,17 @@
+# AGAN PONSEL Flutter v0.8.0 Build 12 — AGANA
+
+- AGANA, asisten perintah bahasa Indonesia di perangkat, dengan UI percakapan modern.
+- Baca piutang/jatuh tempo, produk/stok, status service, laporan, dan saldo kas bila tidak disembunyikan.
+- Tambah pelanggan, catat pengeluaran, piutang baru, dan tugas menggunakan draft + konfirmasi pengguna.
+- Aksi kompleks diarahkan ke formulir lama, bukan melakukan perubahan tanpa persetujuan.
+- SQL migration v7 → v8: tabel `agent_activity` (jenis aksi dan waktu), tanpa menyimpan teks chat/nomor HP.
+- Backup JSON mencakup tabel audit; restore format lama tetap bisa diproses.
+- Akses AGANA dari kartu Beranda, menu Lainnya, dan ikon header.
+- Tes parser perintah dan SQL migration smoke test ditambahkan.
+- Tidak ada pengiriman data ke layanan AI cloud. Build APK belum diverifikasi untuk Build 12.
+
+---
+
 # AGAN PONSEL Flutter v0.7.0 Build 11
 
 - ADD: Piutang & Jatuh Tempo, reminder center, riwayat cicilan, pelunasan.

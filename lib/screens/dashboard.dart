@@ -12,6 +12,7 @@ import 'pos.dart';
 import 'others.dart';
 import 'receivables.dart';
 import '../services/receivables_service.dart';
+import 'agana_agent.dart';
 
 class DashboardScreen extends StatefulWidget {
   final ValueChanged<int> navigate;
@@ -38,6 +39,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return RefreshIndicator(onRefresh: () async { reload(); await stats; }, child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 26), children: [
         _Welcome(onTap: reload),
+        const SizedBox(height: 12),
+        _AganaCard(onTap: () => widget.open(const AganaAgentScreen())),
         const SizedBox(height: 13),
         BalanceCard(onOpen: () => widget.open(const CashScreen())),
         const SizedBox(height: 12),
@@ -98,6 +101,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const _LocalDataBanner(),
       ]));
     },
+  );
+}
+
+class _AganaCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AganaCard({required this.onTap});
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(22),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFF34358B), Color(0xFF6858DC)]),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: const Row(children: [
+        CircleAvatar(backgroundColor: Colors.white24, child: Icon(Icons.auto_awesome_rounded, color: Colors.white)),
+        SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Tanya AGANA', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
+          SizedBox(height: 3),
+          Text('Cek piutang, stok, service, atau catat data toko',
+            style: TextStyle(color: Color(0xFFE4DFFF), fontSize: 11.5)),
+        ])),
+        Icon(Icons.arrow_forward_rounded, color: Colors.white),
+      ]),
+    ),
   );
 }
 

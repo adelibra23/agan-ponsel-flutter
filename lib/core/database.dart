@@ -80,7 +80,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
@@ -88,6 +88,7 @@ class AppDatabase {
         await _createPhotoExtras(db);
         await _createStoreExtras(db);
         await _createReceivables(db);
+        await _createAgentAudit(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -109,8 +110,20 @@ class AppDatabase {
         if (oldVersion < 7) {
           await _createReceivables(db);
         }
+        if (oldVersion < 8) {
+          await _createAgentAudit(db);
+        }
       },
     );
+  }
+
+  // v8: Minimal action audit. Do not store chat text, phone numbers or PINs.
+  static Future<void> _createAgentAudit(DatabaseExecutor db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS agent_activity(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )''');
   }
 
   // v7: Piutang terpisah dari kas. Pelunasan dicatat sebagai jurnal pembayaran.

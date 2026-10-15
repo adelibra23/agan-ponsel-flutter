@@ -45,11 +45,14 @@ jobs:
       - name: Validate visible copy
         run: python3 scripts/check_labels.py
 
+      - name: Check AGANA SQLite migration
+        run: python3 scripts/smoke_agent_sqlite.py
+
       - name: Analyze Flutter code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run basic unit tests
-        run: flutter test test/format_test.dart test/feature_test.dart test/theme_contrast_test.dart test/receivables_test.dart
+        run: flutter test test/format_test.dart test/feature_test.dart test/theme_contrast_test.dart test/receivables_test.dart test/agana_intents_test.dart
 
       - name: Build release APK
         run: flutter build apk --release
@@ -57,7 +60,7 @@ jobs:
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-v0.7.0-Build11-APK
+          name: AGAN-PONSEL-v0.8.0-Build12-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
