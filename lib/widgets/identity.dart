@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/theme.dart';
+import 'store_logo.dart';
 
 class AnimatedBrandMark extends StatefulWidget {
   final double size;
@@ -82,7 +83,7 @@ class BrandHeader extends StatelessWidget {
         decoration: BoxDecoration(shape: BoxShape.circle, color: brandCyan.withOpacity(.11)))),
       Padding(padding: const EdgeInsets.fromLTRB(15, 12, 12, 13), child: Column(children: [
         Row(children: [
-          const AnimatedBrandMark(size: 46),
+          const StoreLogo(size: 46),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
@@ -92,7 +93,7 @@ class BrandHeader extends StatelessWidget {
             const Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.circle, size: 6, color: Color(0xFF5BFFBD)),
               SizedBox(width: 5),
-              Text('OFFLINE • LOCAL FIRST', style: TextStyle(color: Colors.white70,
+              Text('OFFLINE • TOKO DIGITAL', style: TextStyle(color: Colors.white70,
                 fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .45)),
             ]),
           ])),
@@ -108,7 +109,7 @@ class BrandHeader extends StatelessWidget {
             color: brandCyan, borderRadius: BorderRadius.circular(10))),
           const SizedBox(width: 9),
           Expanded(child: AnimatedSwitcher(duration: const Duration(milliseconds: 240),
-            child: Text(section == 'Beranda' ? 'Dashboard & aktivitas toko' : subheading,
+            child: Text(section == 'Beranda' ? 'Dashboard • Kasir • Service • Inventaris' : subheading,
               key: ValueKey(section), style: const TextStyle(color: Colors.white,
                 fontSize: 12, fontWeight: FontWeight.w700)))),
           const Icon(Icons.shield_rounded, color: Color(0xFF83F4DA), size: 15),

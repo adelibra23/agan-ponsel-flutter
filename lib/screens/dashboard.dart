@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'cash_screen.dart';
+import 'store_notes.dart';
 import '../core/database.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
@@ -33,6 +36,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return RefreshIndicator(onRefresh: () async { reload(); await stats; }, child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 26), children: [
         _Welcome(onTap: reload),
+        const SizedBox(height: 13),
+        BalanceCard(onOpen: () => widget.open(const CashScreen())),
+        const SizedBox(height: 12),
+        _DailyGoal(revenue: data['revenue']!),
         const SizedBox(height: 18),
         const SectionTitle('Ringkasan hari ini', subtitle: 'Pantau performa toko secara langsung'),
         GridView.count(
@@ -59,7 +66,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             QuickIcon(icon: Icons.people_alt_rounded, color: const Color(0xFF784CE8), label: 'Pelanggan', action: () => widget.open(const CustomersScreen())),
             QuickIcon(icon: Icons.bar_chart_rounded, color: const Color(0xFF43867F), label: 'Laporan', action: () => widget.open(const ReportsScreen())),
             QuickIcon(icon: Icons.payments_rounded, color: const Color(0xFFE65759), label: 'Pengeluaran', action: () => widget.open(const ExpensesScreen())),
-            QuickIcon(icon: Icons.receipt_long_rounded, color: const Color(0xFF64758E), label: 'Riwayat', action: () => widget.open(const SalesHistoryScreen())),
+            QuickIcon(icon: Icons.account_balance_wallet_outlined, color: const Color(0xFF2256B3), label: 'Saldo Kas', action: () => widget.open(const CashScreen())),
+            QuickIcon(icon: Icons.task_alt_rounded, color: const Color(0xFF64758E), label: 'Tugas Toko', action: () => widget.open(const StoreNotesScreen())),
           ],
         ),
         const SizedBox(height: 21),
@@ -124,4 +132,35 @@ class _OfflineBanner extends StatelessWidget {
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
     ]),
   );
+}
+
+
+class _DailyGoal extends StatelessWidget {
+  final int revenue;
+  const _DailyGoal({required this.revenue});
+  @override
+  Widget build(BuildContext context) => FutureBuilder<SharedPreferences>(
+    future: SharedPreferences.getInstance(), builder: (context, snap) {
+      if (!snap.hasData) return const SizedBox.shrink();
+      final target = int.tryParse(snap.data!.getString('daily_sales_target') ?? '1000000') ?? 1000000;
+      if (target <= 0) return const SizedBox.shrink();
+      final double progress = (revenue / target).clamp(0.0, 1.0).toDouble();
+      return Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.flag_rounded, size: 18, color: brandBlue),
+          const SizedBox(width: 8),
+          const Expanded(child: Text('Target omzet hari ini',
+            style: TextStyle(fontWeight: FontWeight.w800))),
+          Text('${(revenue / target * 100).round()}%',
+            style: const TextStyle(fontWeight: FontWeight.w900, color: brandBlue)),
+        ]),
+        const SizedBox(height: 12),
+        ClipRRect(borderRadius: BorderRadius.circular(9),
+          child: LinearProgressIndicator(value: progress, minHeight: 9,
+            backgroundColor: brandBlue.withValues(alpha: .10))),
+        const SizedBox(height: 7),
+        Text('${rupiah(revenue)} dari ${rupiah(target)}',
+          style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      ]));
+    });
 }

@@ -1,42 +1,32 @@
-# AGAN PONSEL Flutter Offline v0.5.0 Build 7
+# AGAN PONSEL Flutter Offline v0.6.0 • Build 9
 
-Aplikasi Android Flutter (Dart) untuk operasional toko AGAN PONSEL, dengan SQLite lokal.
-**Source-only; build dan pengujian perangkat masih diperlukan.**
+Aplikasi **Android Flutter + SQLite**, offline tanpa server komputer. Paket ini merupakan source code lanjutan v0.5.1 Build 8; bukan APK yang sudah diuji di HP.
 
-## Desain & alur
-- Header baru: AG Orbit, gradasi biru ke cyan, indikator *offline*, tombol scan cepat, cari, stok menipis.
-- Bottom navigation animasi Beranda, Kasir, Produk, Service, Lainnya.
-- Kasir multi-item, diskon, struk, printer ESC/POS Bluetooth Classic (memerlukan printer yang kompatibel).
-- Service HP bertahap, status, histori, pembayaran, teknisi dan estimasi selesai.
-- Profil lokal, keuangan, laporan, stok, transaksi digital (pencatatan saja).
+## Fitur baru Build 9
 
-## Fitur baru
-1. **Scan barcode**: menu Produk & Stok atau Kasir -> tombol pemindai. CameraX ML Kit berjalan offline. Mendukung EAN, UPC, QR, ITF dan Code 128.
-2. **Foto produk**: tambah/edit produk -> ambil dari galeri atau kamera. Foto disimpan pada dokumen privat Android; tidak diupload ke internet.
-3. **SKU cerdas**: tombol otomatis atau scan label. Duplikat kode ditolak untuk produk berbeda.
-4. **Keamanan & PIN**: Menu Lainnya / Pengaturan -> Keamanan & PIN. PIN 6 digit (salted iterative SHA-256), jeda 30 detik setelah 5 percobaan salah. Mengunci saat masuk aplikasi dan setelah 20 detik di latar belakang.
-5. **Backup & Restore**: foto ikut masuk ke JSON backup v2 (dengan SHA-256). Restore dapat membaca backup v1 dari database v4, tetapi foto tidak ada pada backup lama. Batas total file backup 50MB; jangan gunakan backup JSON sebagai berkas terenkripsi.
-6. **Laba/unit** ditampilkan saat mengubah harga modal dan jual.
+- **Kontak pelanggan**: tekan ikon kontak pada menu Pelanggan, izinkan `READ_CONTACTS`, cari dan pilih satu kontak/nomor untuk menambah pelanggan. Tidak ada impor massal atau sinkronisasi otomatis. Tetap bisa input manual bila izin ditolak.
+- **Logo toko**: Pengaturan → **Logo & Branding**, pilih gambar JPG/PNG/WebP dari galeri (maksimum 2 MB). Logo ditampilkan di header, profil, dan halaman tentang aplikasi; file disimpan privat di Android.
+- **Saldo kas lokal**: Dashboard → kartu saldo; tekan ikon mata untuk menyembunyikan/menampilkan nominal. Saldo dihitung dari penjualan bertanda **Tunai** dalam sistem kasir modern + penyesuaian kas manual − semua pengeluaran yang tercatat. Penjualan lama, layanan digital, DP service, serta rekening bank tidak termasuk karena cara bayarnya tidak tercatat atau terhubung. Saldo dapat bernilai negatif jika pembukuan belum direkonsiliasi. Tidak ada integrasi bank atau e-wallet.
+- **Buku kas**: Menu Lainnya → Saldo & Kas Toko untuk setoran/pengambilan manual dan riwayat penyesuaian.
+- **PIN & Biometrik**: Pengaturan → Keamanan & PIN → aktifkan PIN 6 digit lebih dulu, kemudian verifikasi perangkat untuk mengaktifkan biometrik. Android dapat menawarkan sidik jari atau pengenalan wajah jika *secure biometrics* didukung dan didaftarkan. PIN tetap sebagai cadangan. Tidak memindahkan data wajah/jari ke aplikasi.
+- **Catatan & Tugas**: checklist lokal dan hapus catatan; tersimpan SQLite.
+- **Target omzet harian**: Dashboard menampilkan indikator omzet/target. Atur melalui tombol bendera pada halaman Saldo & Kas Toko.
+- **Tipografi & header**: skala dan ketebalan teks konsisten, brand logo baru, indikator offline, navigasi animasi tetap dipertahankan.
+- **Backup & Restore v3**: ekspor SQLite skema v6, semua tabel, foto produk, logo toko, profil, dan target omzet. Impor backup format lama v1/v2 tetap diterima. Backup JSON menggunakan checksum SHA-256, tetapi **TIDAK terenkripsi**.
 
-## Struktur data / migrasi
-SQLite `agan_ponsel_v1.db` tidak dihapus, versi skema naik 4->5, menambah satu kolom `products.photo_file` dengan default string kosong. Data lama tetap digunakan.
+## Teknologi
 
-## Keamanan dan keterbatasan
-- PIN hanya mengunci antarmuka; tidak mengenkripsi SQLite, data gambar, atau backup JSON.
-- Smartphone dengan akses root dapat membuka data lokal. Tanpa server, lupa PIN tidak bisa direset lewat email.
-- Backup berisi data pelanggan/IMEI/foto, simpan hanya di lokasi tepercaya.
-- Barcode scanner kamera dan printer Bluetooth wajib diuji pada HP Android dan perangkat fisik.
-- **APK belum dikompilasi maupun dites di sesi ini**. GitHub Actions akan memvalidasi.
-- Jangan uninstall versi lama yang berisi data; backup sebelum migrasi dan perhatikan tanda tangan APK.
+Dart/Flutter, `sqflite` versi skema 6, `flutter_contacts` v1 untuk pembacaan kontak, `local_auth` v2 untuk biometrik, `shared_preferences`, `image_picker`, `path_provider`, `mobile_scanner`, `print_bluetooth_thermal`.
 
-## Build APK memakai HP + Termux
-Lihat [INSTALL-TERMUX.txt](INSTALL-TERMUX.txt). Proses kompilasi dilakukan pada GitHub Actions, bukan langsung di Termux ARM64.
+## Cara build APK dari Android + Termux + GitHub Actions
 
-## Developer build
-`flutter create --platforms=android --project-name agan_ponsel .`
-`python3 scripts/prepare_android.py`
-`flutter pub get`
-`dart format lib test`
-`flutter analyze --no-fatal-infos --no-fatal-warnings`
-`flutter test test/format_test.dart test/feature_test.dart`
-`flutter build apk --release`
+1. Unduh ZIP Build 9, pindahkan ke folder Download ponsel.
+2. Jalankan perintah dari `INSTALL-TERMUX.txt` dalam proyek yang sudah ada.
+3. GitHub Actions otomatis melakukan `flutter create`, menambah izin Android, `flutter pub get`, `dart format`, `flutter analyze`, unit test dan `flutter build apk --release`.
+4. Jika workflow hijau, masuk ke run → **Artifacts** → unduh ZIP APK. Bila merah, periksa **langkah pertama yang gagal**, bukan hanya baris akhir `exit code 1`.
+
+**Peringatan data:** SQLite disimpan di area privat Android, tetapi data bisa hilang akibat uninstall/hapus data. Sebelum memperbarui APK produksi, buat backup dan pastikan nama paket Android serta sertifikat tanda tangan cocok dengan versi yang sebelumnya terpasang. GitHub runner yang membuat keystore debug baru tiap kali dapat menghasilkan APK dengan tanda tangan berbeda; APK seperti itu tidak dapat menimpa instalasi sebelumnya tanpa konfigurasi signing yang konsisten. Jangan uninstall sebelum backup terverifikasi.
+
+**Keamanan:** Kunci PIN/biometrik melindungi antarmuka, **tidak mengenkripsi database ataupun backup**. Kontak yang dipilih akan disalin ke SQLite, dan dapat ikut diekspor bersama backup. Jangan membagikan backup mentah secara publik.
+
+**Status:** Pembaruan source sudah dipaketkan dan skrip persiapan Android diuji secara lokal. Kompilasi Flutter serta pengujian perangkat biometrik, kontak, printer dan pemulihan data fisik belum dilakukan dalam sesi ini.

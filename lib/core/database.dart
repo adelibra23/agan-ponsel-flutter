@@ -80,12 +80,13 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
         await _createServiceExtras(db);
         await _createPhotoExtras(db);
+        await _createStoreExtras(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -100,6 +101,9 @@ class AppDatabase {
         }
         if (oldVersion < 5) {
           await _createPhotoExtras(db);
+        }
+        if (oldVersion < 6) {
+          await _createStoreExtras(db);
         }
       },
     );
@@ -396,4 +400,69 @@ class AppDatabase {
 
   static Future<List<Map<String, Object?>>> receiptItems(int id) async =>
       (await instance).query('receipt_items', where: 'receipt_id=?', whereArgs: [id]);
+
+  // Version 6: manual cash ledger and store notes, additive only.
+  static Future<void> _createStoreExtras(DatabaseExecutor db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS cash_adjustments(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      delta INTEGER NOT NULL,
+      note TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )''');
+    await db.execute('''CREATE TABLE IF NOT EXISTS store_notes(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      text TEXT NOT NULL,
+      done INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )''');
+  }
+
+  /// Estimated cash-on-hand recorded by this offline app. No bank sync.
+  /// Older one-item sales and service deposits have unknown payment methods,
+  /// so they are deliberately not counted as cash.
+  static Future<int> cashBalance() async {
+    final db = await instance;
+    final deposits = Sqflite.firstIntValue(await db.rawQuery(
+      'SELECT COALESCE(SUM(delta),0) FROM cash_adjustments')) ?? 0;
+    final received = Sqflite.firstIntValue(await db.rawQuery(
+      "SELECT COALESCE(SUM(total),0) FROM receipts WHERE payment='Tunai'")) ?? 0;
+    final expenses = Sqflite.firstIntValue(await db.rawQuery(
+      'SELECT COALESCE(SUM(amount),0) FROM expenses')) ?? 0;
+    return deposits + received - expenses;
+  }
+
+  static Future<void> adjustCash(int delta, String note) async {
+    if (delta == 0 || delta.abs() > 1000000000) {
+      throw const FormatException('Nominal harus antara Rp1 dan Rp1 miliar');
+    }
+    if (note.trim().isEmpty) throw const FormatException('Keterangan wajib diisi');
+    final db = await instance;
+    await db.insert('cash_adjustments', {
+      'delta': delta, 'note': note.trim(),
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  static Future<List<Map<String, Object?>>> cashHistory() async =>
+    (await instance).query('cash_adjustments', orderBy: 'id DESC', limit: 100);
+
+  static Future<List<Map<String, Object?>>> notes() async =>
+    (await instance).query('store_notes', orderBy: 'done ASC, id DESC');
+
+  static Future<void> addNote(String value) async {
+    if (value.trim().isEmpty) throw const FormatException('Catatan tidak boleh kosong');
+    await (await instance).insert('store_notes', {
+      'text': value.trim(), 'done': 0,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  static Future<void> markNote(int id, bool done) async {
+    await (await instance).update('store_notes', {'done': done ? 1 : 0},
+      where: 'id=?', whereArgs: [id]);
+  }
+
+  static Future<void> deleteNote(int id) async {
+    await (await instance).delete('store_notes', where: 'id=?', whereArgs: [id]);
+  }
 }

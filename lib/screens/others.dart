@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'contact_picker.dart';
+import 'inventory.dart';
+import 'cash_screen.dart';
+import 'store_notes.dart';
 import '../core/database.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
@@ -18,7 +22,14 @@ class MoreScreen extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(16, 20, 16, 25), children: [
       const PageIntro('Manajemen Toko', 'Fitur tambahan untuk operasional AGAN PONSEL'),
       _MenuItem(icon: Icons.people_alt_rounded, color: const Color(0xFF7D50D6),
-        title: 'Pelanggan', subtitle: 'Simpan kontak dan catatan', onTap: () => open(const CustomersScreen())),
+        title: 'Pelanggan & Kontak', subtitle: 'Input manual atau pilih dari kontak HP', onTap: () => open(const CustomersScreen())),
+      _MenuItem(icon: Icons.account_balance_wallet_rounded, color: const Color(0xFF1F68D7),
+        title: 'Saldo & Kas Toko', subtitle: 'Saldo kas, setoran dan penarikan manual', onTap: () => open(const CashScreen())),
+      _MenuItem(icon: Icons.task_alt_rounded, color: const Color(0xFF4B78A8),
+        title: 'Catatan & Tugas', subtitle: 'Checklist kegiatan toko offline', onTap: () => open(const StoreNotesScreen())),
+      _MenuItem(icon: Icons.notification_important_outlined, color: const Color(0xFFDD8517),
+        title: 'Stok Menipis', subtitle: 'Pantau produk di bawah batas minimum',
+        onTap: () => open(const InventoryScreen(lowOnly: true))),
       _MenuItem(icon: Icons.sim_card_rounded, color: const Color(0xFF0D87CF),
         title: 'Pulsa & Transaksi Digital', subtitle: 'Catat paket data, top up, admin', onTap: () => open(const DigitalScreen())),
       _MenuItem(icon: Icons.payments_rounded, color: const Color(0xFFE76655),
@@ -30,7 +41,7 @@ class MoreScreen extends StatelessWidget {
       _MenuItem(icon: Icons.swap_vert_circle_outlined, color: const Color(0xFFAD721E),
         title: 'Riwayat Stok', subtitle: 'Penambahan dan pengurangan stok', onTap: () => open(const StockHistoryScreen())),
       _MenuItem(icon: Icons.lock_person_rounded, color: const Color(0xFF16A387),
-        title: 'Keamanan & PIN', subtitle: 'Kunci aplikasi dengan PIN 6 digit',
+        title: 'Keamanan & Biometrik', subtitle: 'PIN, wajah atau sidik jari Android',
         onTap: () => open(const PinSettingsScreen())),
       _MenuItem(icon: Icons.account_circle_outlined, color: const Color(0xFF2783DC),
         title: 'Akun & Profil', subtitle: 'Identitas pengelola dan toko offline',
@@ -42,7 +53,7 @@ class MoreScreen extends StatelessWidget {
         title: 'Printer Bluetooth', subtitle: 'Hubungkan thermal printer 58/80 mm',
         onTap: () => open(const BluetoothPrinterScreen())),
       _MenuItem(icon: Icons.settings_suggest_rounded, color: const Color(0xFF697E94),
-        title: 'Pengaturan', subtitle: 'Tema, keamanan data dan aplikasi',
+        title: 'Pengaturan', subtitle: 'Tampilan, keamanan, printer dan logo toko',
         onTap: () => open(SettingsScreen(dark: dark, onThemeChanged: onThemeChanged))),
       const SizedBox(height: 18),
       Surface(child: Row(children: [
@@ -107,6 +118,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
   void initState() { super.initState(); refresh(); }
   void refresh() => setState(() => loader = AppDatabase.instance.then((d) => d.query('customers', orderBy: 'id DESC')));
 
+  Future<void> importContact() async {
+    final result = await Navigator.of(context).push<ContactChoice>(
+      MaterialPageRoute(builder: (_) => const ContactPickerScreen()));
+    if (!mounted || result == null) return;
+    final cleaned = result.number.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleaned.isEmpty) return;
+    final db = await AppDatabase.instance;
+    final existing = await db.query('customers', where: 'phone=?', whereArgs: [cleaned], limit: 1);
+    if (!mounted) return;
+    if (existing.isNotEmpty) { notify(context, 'Nomor sudah tercatat di pelanggan'); return; }
+    await db.insert('customers', {'name': result.name, 'phone': cleaned,
+      'note': 'Dipilih dari kontak HP'});
+    if (mounted) { refresh(); notify(context, 'Pelanggan ditambahkan'); }
+  }
+
   Future<void> add() async {
     final name = TextEditingController();
     final phone = TextEditingController();
@@ -115,7 +141,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
       mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('Tambah Pelanggan', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(onPressed: () async {
+          final choice = await Navigator.of(context).push<ContactChoice>(
+            MaterialPageRoute(builder: (_) => const ContactPickerScreen()));
+          if (choice != null) { name.text = choice.name;
+            phone.text = choice.number.replaceAll(RegExp(r'[^0-9+]'), ''); }
+        }, icon: const Icon(Icons.contacts_rounded), label: const Text('Pilih dari Kontak HP')),
+        const SizedBox(height: 13),
         TextField(controller: name, decoration: inputDecoration('Nama pelanggan')),
         const SizedBox(height: 10),
         TextField(controller: phone, keyboardType: TextInputType.phone, decoration: inputDecoration('Nomor HP')),
@@ -140,7 +173,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
   @override
   Widget build(BuildContext context) => StorePage(title: 'Pelanggan',
-    action: IconButton(onPressed: add, icon: const Icon(Icons.person_add_alt_rounded)),
+    action: Row(mainAxisSize: MainAxisSize.min, children: [
+      IconButton(tooltip: 'Ambil dari kontak HP', onPressed: importContact,
+        icon: const Icon(Icons.contact_phone_rounded)),
+      IconButton(tooltip: 'Tambah manual', onPressed: add,
+        icon: const Icon(Icons.person_add_alt_rounded)),
+    ]),
     child: FutureBuilder<List<Map<String, Object?>>>(future: loader, builder: (ctx, snap) {
       if (snap.hasError) return EmptyView(icon: Icons.error_outline, title: 'Tidak bisa membaca pelanggan', subtitle: '${snap.error}');
       if (!snap.hasData) return const ScreenLoading();
@@ -505,20 +543,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text('AGAN PONSEL', style: TextStyle(fontWeight: FontWeight.w900,
               fontSize: 21, color: Colors.white)),
             SizedBox(height: 4),
-            Text('Flutter Offline • v0.4.0 Build 5',
+            Text('Flutter Offline • v0.6.0 Build 9',
               style: TextStyle(color: Colors.white70, fontSize: 12)),
           ])),
         ])),
       const SizedBox(height: 22),
       const SectionTitle('Keamanan aplikasi'),
       _MenuItem(icon: Icons.shield_rounded, color: const Color(0xFF13A283),
-        title: 'Kunci Aplikasi & PIN', subtitle: 'Aktifkan atau ubah PIN lokal',
+        title: 'PIN & Biometrik', subtitle: 'Aktifkan PIN dan autentikasi perangkat',
         onTap: () => go(const PinSettingsScreen())),
       const SizedBox(height: 14),
       const SectionTitle('Akun & identitas toko'),
       SettingsCard(icon: Icons.manage_accounts_rounded, color: brandBlue,
         title: 'Pengaturan Akun', subtitle: 'Profil lokal, nomor kontak, alamat dan footer struk',
         onTap: () => go(const AccountSettingsScreen())),
+      SettingsCard(icon: Icons.image_rounded, color: const Color(0xFF4874D5),
+        title: 'Logo & Branding', subtitle: 'Ganti logo toko yang tampil di header',
+        onTap: () => go(const StoreBrandSettingsScreen())),
+      SettingsCard(icon: Icons.account_balance_wallet_rounded, color: const Color(0xFF0D9B7F),
+        title: 'Saldo & Buku Kas', subtitle: 'Kas manual, nominal disembunyikan',
+        onTap: () => go(const CashScreen())),
       const SizedBox(height: 12),
       const SectionTitle('Penyimpanan & perangkat'),
       SettingsCard(icon: Icons.backup_outlined, color: const Color(0xFF8751D1),

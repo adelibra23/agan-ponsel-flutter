@@ -13,6 +13,8 @@ needed = [
     '<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />',
     '<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />',
     '<uses-permission android:name="android.permission.CAMERA" />',
+    '<uses-permission android:name="android.permission.READ_CONTACTS" />',
+    '<uses-permission android:name="android.permission.USE_BIOMETRIC" />',
 ]
 match = re.search(r'<manifest\b[^>]*>', content)
 if not match:
@@ -39,3 +41,33 @@ for filename in ('android/app/build.gradle.kts', 'android/app/build.gradle'):
     body = body.replace('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 24')
     config.write_text(body)
 print('Android camera, Bluetooth, minSdk 24 configured; no app identifier changed')
+
+# local_auth 2.x requires a FragmentActivity host on Android.
+for filename in Path('android/app/src/main').rglob('MainActivity.kt'):
+    body = filename.read_text()
+    body = body.replace('import io.flutter.embedding.android.FlutterActivity',
+                        'import io.flutter.embedding.android.FlutterFragmentActivity')
+    body = body.replace(': FlutterActivity()', ': FlutterFragmentActivity()')
+    filename.write_text(body)
+for filename in Path('android/app/src/main').rglob('MainActivity.java'):
+    body = filename.read_text()
+    body = body.replace('import io.flutter.embedding.android.FlutterActivity;',
+                        'import io.flutter.embedding.android.FlutterFragmentActivity;')
+    body = body.replace('extends FlutterActivity', 'extends FlutterFragmentActivity')
+    filename.write_text(body)
+
+# Android 8/9 local_auth compatibility: provide an AppCompat theme.
+for filename in (Path('android/app/src/main/res/values/styles.xml'),
+                 Path('android/app/src/main/res/values-night/styles.xml')):
+    if filename.exists():
+        body = filename.read_text()
+        body = body.replace('<style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">',
+                            '<style name="LaunchTheme" parent="Theme.AppCompat.DayNight.NoActionBar">')
+        body = body.replace('<style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">',
+                            '<style name="NormalTheme" parent="Theme.AppCompat.DayNight.NoActionBar">')
+        body = body.replace('<style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">',
+                            '<style name="LaunchTheme" parent="Theme.AppCompat.DayNight.NoActionBar">')
+        body = body.replace('<style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">',
+                            '<style name="NormalTheme" parent="Theme.AppCompat.DayNight.NoActionBar">')
+        filename.write_text(body)
+print('Contacts, biometrics and FlutterFragmentActivity prepared')

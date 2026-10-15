@@ -11,6 +11,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../core/database.dart';
 import 'product_photos.dart';
+import 'store_brand.dart';
 
 /// A portable, integrity-checked snapshot of the on-device SQLite database.
 /// Backups are NOT encrypted. Keep them in a private, trusted location.
@@ -21,7 +22,7 @@ class BackupService {
   static const tables = <String>[
     'products', 'sales', 'services', 'customers', 'expenses',
     'digital_transactions', 'receipts', 'receipt_items',
-    'stock_movements', 'service_events',
+    'stock_movements', 'service_events', 'cash_adjustments', 'store_notes',
   ];
   static const requiredTables = <String>{
     'products', 'sales', 'services', 'customers', 'expenses',
@@ -30,6 +31,7 @@ class BackupService {
   static const profileKeys = <String>[
     'local_owner_name', 'local_owner_phone', 'local_owner_email',
     'local_shop_name', 'local_shop_address', 'local_receipt_footer',
+    'daily_sales_target',
   ];
 
   static Future<Map<String, dynamic>> _snapshot() async {
@@ -59,13 +61,15 @@ class BackupService {
       final value = prefs.getString(key);
       if (value != null) profile[key] = value;
     }
+    final logoBytes = await StoreBrand.backupBytes();
     return <String, dynamic>{
       'format': 'agan-ponsel-sqlite-json',
-      'formatVersion': 2,
-      'databaseVersion': 5,
+      'formatVersion': 3,
+      'databaseVersion': 6,
       'createdAt': DateTime.now().toIso8601String(),
       'tables': records,
       'media': media,
+      'logo': logoBytes == null ? null : base64Encode(logoBytes),
       'profile': profile,
     };
   }
@@ -108,10 +112,10 @@ class BackupService {
     if (sha256.convert(utf8.encode(jsonEncode(payload))).toString() != hash) {
       throw const FormatException('Integritas backup tidak cocok (SHA-256)');
     }
-    if (payload['format'] != 'agan-ponsel-sqlite-json' || ![1, 2].contains(payload['formatVersion'])) {
+    if (payload['format'] != 'agan-ponsel-sqlite-json' || ![1, 2, 3].contains(payload['formatVersion'])) {
       throw const FormatException('Format atau versi backup tidak didukung');
     }
-    if (![4, 5].contains(payload['databaseVersion'])) {
+    if (![4, 5, 6].contains(payload['databaseVersion'])) {
       throw const FormatException('Backup memerlukan versi database yang berbeda');
     }
     final rawTables = payload['tables'];
@@ -180,7 +184,18 @@ class BackupService {
         throw FormatException('File foto tidak lengkap: $filename');
       }
     }
+    List<int>? logoBytes;
+    final rawLogo = payload['logo'];
+    if (rawLogo != null) {
+      if (rawLogo is! String) throw const FormatException('Logo backup tidak valid');
+      logoBytes = base64Decode(rawLogo);
+      if (!StoreBrand.validBytes(logoBytes)) {
+        throw const FormatException('Logo toko bukan JPG, PNG atau WebP yang valid');
+      }
+    }
     return BackupPreview(
+      hasBranding: (payload['formatVersion'] as int) >= 3,
+      logoBytes: logoBytes,
       filename: file.name,
       createdAt: '${payload['createdAt'] ?? '-'}',
       data: validated,
@@ -230,17 +245,28 @@ class BackupService {
     for (final entry in backup.profile.entries) {
       await prefs.setString(entry.key, entry.value);
     }
+    if (backup.hasBranding) {
+      if (backup.logoBytes == null) {
+        await StoreBrand.removeLogo();
+      } else {
+        await StoreBrand.restoreBytes(backup.logoBytes!);
+      }
+    }
   }
 
 }
 
 class BackupPreview {
+  final bool hasBranding;
+  final List<int>? logoBytes;
   final String filename;
   final String createdAt;
   final Map<String, List<Map<String, Object?>>> data;
   final Map<String, String> profile;
   final Map<String, List<int>> media;
   const BackupPreview({
+    required this.hasBranding,
+    required this.logoBytes,
     required this.filename,
     required this.createdAt,
     required this.data,

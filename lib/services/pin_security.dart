@@ -87,6 +87,7 @@ class PinSecurity {
     if (!ok.accepted) return false;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_hashKey);
+    await prefs.setBool('local_biometrics_enabled_v1', false);
     await prefs.remove(_saltKey);
     await prefs.remove(_failsKey);
     await prefs.remove(_untilKey);

@@ -1,16 +1,23 @@
 # AGAN PONSEL Flutter — Changelog
 
-## v0.5.0 Build 7 (15 Oktober 2026)
+## v0.6.0 Build 9 — Offline Plus
 
-- Header biru premium baru, tombol scan cepat, indikator *offline*, aksen cyan, dan animasi AG Orbit.
-- Barcode/QR scanner kamera offline dari produk, kasir, dan header. Isi kode secara manual jika kamera tidak tersedia.
-- Foto produk dari galeri atau kamera disimpan privat di Android dan tampil di daftar produk dan kasir.
-- SQLite schema v5: kolom `photo_file`, indeks lama dipertahankan; pemeriksaan barcode/SKU ganda.
-- Pembuatan kode SKU otomatis dan kalkulasi estimasi laba per unit pada editor produk.
-- Kunci aplikasi PIN 6 digit: hash salted, perlambat brute force, batas percobaan, kunci setelah dari latar belakang 20 detik.
-- Backup JSON versi 2 menyertakan file foto produk dalam payload, dukungan restore backup v4 lama, validasi nama file dan ukuran.
-- Permission kamera dan Android minSdk 24 dikonfigurasi oleh skrip idempotent di CI.
-- Unit test dasar untuk format PIN dan nama foto aman.
+- Kontak pelanggan dari buku telepon Android (izin baca saja, dipilih satu per satu)
+- Pengaturan logo toko dan preview logo di header/profil
+- Saldo kas tercatat dan riwayat setoran/pengambilan, tombol sembunyikan saldo
+- Target omzet harian dengan indikator pencapaian
+- Tugas dan catatan toko menggunakan SQLite
+- PIN + biometrik Android (wajah/sidik jari sesuai dukungan perangkat)
+- Typography/branding header lebih rapi
+- SQLite skema 6, migrasi additive (produk, tiket service, transaksi tetap)
+- Backup JSON v3 membawa foto produk, logo, target harian, kas dan tugas; restore kompatibel v1/v2
+- Izin Android READ_CONTACTS, USE_BIOMETRIC dan host FlutterFragmentActivity
+- `flutter_contacts` 1.x dan `local_auth` 2.x untuk memastikan API plugin kompatibel
 
-Keamanan: PIN hanya melindungi antarmuka, **tidak mengenkripsi SQLite**. Backup JSON juga tidak terenkripsi.
-Status: paket source disiapkan dan diperiksa secara statis; hasil Flutter analyzer / build APK belum diverifikasi.
+## v0.5.1 Build 8
+
+- Hotfix parser PIN `List<int>` dan import helper halaman pengaturan PIN; build GitHub Actions sukses.
+
+## v0.5.0 Build 7
+
+- Barcode scanner, foto produk, PIN, identitas visual AGAN PONSEL.

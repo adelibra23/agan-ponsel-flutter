@@ -8,6 +8,8 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../services/backup_service.dart';
 import '../../services/printer_service.dart';
+import '../../services/store_brand.dart';
+import '../../widgets/store_logo.dart';
 import '../../widgets/kit.dart';
 
 class SettingsCard extends StatelessWidget {
@@ -111,8 +113,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(24),
             gradient: const LinearGradient(colors: [Color(0xFF073FC0), Color(0xFF0A92EA)])),
           child: Row(children: [
-            const CircleAvatar(radius: 28, backgroundColor: Colors.white24,
-              child: Icon(Icons.manage_accounts_rounded, color: Colors.white, size: 30)),
+            const StoreLogo(size: 58),
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
               Text('Identitas Pengelola', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 17)),
@@ -454,13 +455,12 @@ class AboutAganScreen extends StatelessWidget {
       Container(padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 18),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(28),
           gradient: const LinearGradient(colors: [Color(0xFF0736B1), Color(0xFF159DEB)])),
-        child: const Column(children: [
-          CircleAvatar(radius: 42, backgroundColor: Colors.white,
-            child: Text('AG', style: TextStyle(color: brandBlue, fontSize: 27, fontWeight: FontWeight.w900))),
+        child: Column(children: [
+          const StoreLogo(size: 84),
           SizedBox(height: 15),
           Text('AGAN PONSEL', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: Colors.white)),
           SizedBox(height: 5),
-          Text('Flutter Offline • v0.5.0 Build 7', style: TextStyle(color: Colors.white70)),
+          Text('Flutter Offline • v0.6.0 Build 9', style: TextStyle(color: Colors.white70)),
           SizedBox(height: 8),
           Text('Operasional toko, kasir, dan service HP dalam satu aplikasi',
             style: TextStyle(color: Colors.white, fontSize: 12), textAlign: TextAlign.center),
@@ -475,7 +475,10 @@ class AboutAganScreen extends StatelessWidget {
         Text('• Backup & Restore SQLite dan foto produk ke JSON'),
         Text('• Scan barcode produk dengan kamera (offline)'),
         Text('• Foto produk di Kasir dan Inventaris'),
-        Text('• Kunci aplikasi dengan PIN lokal 6 digit'),
+        Text('• Kunci aplikasi dengan PIN dan biometrik Android'),
+        Text('• Impor pelanggan yang dipilih dari kontak HP'),
+        Text('• Logo toko kustom dan saldo kas privat'),
+        Text('• Catatan tugas dan target omzet harian'),
         Text('• Printer thermal Bluetooth ESC/POS 58/80 mm'),
         Text('• Profil akun pengelola dan identitas toko lokal'),
         Text('• Laporan, transaksi digital dan riwayat penjualan'),
@@ -490,5 +493,64 @@ class AboutAganScreen extends StatelessWidget {
         Text('Backup tersimpan di lokasi yang dipilih pengguna. Menghapus aplikasi dapat menghapus database lokal jika belum dicadangkan.',
           style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ])),
+    ]));
+}
+
+
+class StoreBrandSettingsScreen extends StatefulWidget {
+  const StoreBrandSettingsScreen({super.key});
+  @override
+  State<StoreBrandSettingsScreen> createState() => _StoreBrandSettingsScreenState();
+}
+
+class _StoreBrandSettingsScreenState extends State<StoreBrandSettingsScreen> {
+  bool busy = false;
+  Future<void> pick() async {
+    setState(() => busy = true);
+    try {
+      final changed = await StoreBrand.pickLogo();
+      if (changed && mounted) notify(context, 'Logo toko berhasil diganti');
+    } catch (e) { if (mounted) notify(context, 'Tidak dapat menggunakan gambar: $e'); }
+    finally { if (mounted) setState(() => busy = false); }
+  }
+
+  Future<void> remove() async {
+    setState(() => busy = true);
+    try {
+      await StoreBrand.removeLogo();
+      if (mounted) notify(context, 'Logo kembali ke identitas AG');
+    } catch (e) { if (mounted) notify(context, '$e'); }
+    finally { if (mounted) setState(() => busy = false); }
+  }
+
+  @override
+  Widget build(BuildContext context) => SettingsPageLayout(title: 'Logo & Branding Toko',
+    child: ListView(padding: const EdgeInsets.all(17), children: [
+      Container(padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 22),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(27),
+          gradient: const LinearGradient(colors: [Color(0xFF052C98), brandBlue, Color(0xFF0994E4)])),
+        child: const Column(children: [
+          StoreLogo(size: 102),
+          SizedBox(height: 15),
+          Text('AGAN PONSEL', style: TextStyle(fontSize: 23,
+            fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.8)),
+          SizedBox(height: 6),
+          Text('Identitas toko, tersimpan offline di HP', style: TextStyle(color: Colors.white70)),
+        ])),
+      const SizedBox(height: 21),
+      const SectionTitle('Logo header'),
+      const Surface(child: Text('Pilih gambar JPG, PNG atau WebP maksimal 2 MB. Logo akan dipakai di header dan halaman profil, serta disertakan dalam backup terbaru.')),
+      const SizedBox(height: 15),
+      FilledButton.icon(onPressed: busy ? null : pick,
+        icon: const Icon(Icons.photo_library_outlined),
+        label: const Text('Ganti Logo dari Galeri')),
+      const SizedBox(height: 9),
+      OutlinedButton.icon(onPressed: busy ? null : remove,
+        icon: const Icon(Icons.restore_rounded), label: const Text('Kembalikan Logo AG')),
+      if (busy) const Center(child: Padding(padding: EdgeInsets.all(14),
+        child: CircularProgressIndicator())),
+      const SizedBox(height: 14),
+      Text('Logo disimpan dalam folder privat aplikasi. Jangan uninstall sebelum membuat backup.',
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
     ]));
 }

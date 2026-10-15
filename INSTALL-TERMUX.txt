@@ -1,19 +1,28 @@
-AGAN PONSEL Flutter v0.5.0 Build 7
-===============================
+AGAN PONSEL Flutter v0.6.0 Build 9
+================================
 
-1. Download AGAN-PONSEL-Flutter-v0.5.0-Build7.zip ke folder Download Android.
-2. Buka Termux dan jalankan:
+1. Simpan AGAN-PONSEL-Flutter-v0.6.0-Build9.zip di folder Download Android.
+
+2. Masuk ke Termux. Perintah dijalankan satu per satu:
 
 cd ~/agan-build/agan_ponsel_flutter
-unzip -o "/sdcard/Download/AGAN-PONSEL-Flutter-v0.5.0-Build7.zip"
+
+unzip -o "/sdcard/Download/AGAN-PONSEL-Flutter-v0.6.0-Build9.zip"
+
 git status --short
+
 git add lib pubspec.yaml scripts test .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt
-git commit -m "AGAN PONSEL Flutter v0.5.0 Build7 barcode foto PIN"
+
+git commit -m "AGAN PONSEL Flutter v0.6.0 Build9"
+
 git push origin main
 
-3. Buka GitHub -> repository agan-ponsel-flutter -> Actions.
-4. Pilih build terbaru -> jika hijau, buka Artifacts dan unduh APK.
+3. GitHub Actions:
+https://github.com/adelibra23/agan-ponsel-flutter/actions
 
-CATATAN: Pastikan database telah dibackup sebelum mengganti atau menghapus APK.
-Jangan uninstall versi lama untuk upgrade! Update APK butuh applicationId dan kunci tanda tangan yang sama.
-Jika GitHub Actions merah, lihat log error. File APK belum diverifikasi berjalan.
+4. Bila build sukses, unduh artifact AGAN-PONSEL-v0.6.0-Build9-APK.
+
+Jika Termux belum diberi izin akses penyimpanan, jalankan termux-setup-storage.
+Jika git push gagal dengan Could not resolve host, periksa koneksi dan ulangi git push; tidak perlu git commit ulang.
+
+JANGAN uninstall aplikasi berisi transaksi penting sebelum membuat backup. Pastikan package ID dan sertifikat penandatanganan APK sama untuk upgrade yang mempertahankan data lama.

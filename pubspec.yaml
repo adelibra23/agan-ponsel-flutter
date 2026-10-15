@@ -1,7 +1,7 @@
 name: agan_ponsel
 description: AGAN PONSEL offline Android - dashboard, kasir, stok, service, laporan.
 publish_to: none
-version: 0.5.0+7
+version: 0.6.0+9
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -19,6 +19,8 @@ dependencies:
   mobile_scanner: ^7.4.2
   image_picker: ^1.2.1
   path_provider: ^2.1.5
+  flutter_contacts: ^1.1.9+2
+  local_auth: ^2.3.0
 
 dev_dependencies:
   flutter_test:

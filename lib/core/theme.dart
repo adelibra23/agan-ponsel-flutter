@@ -53,7 +53,12 @@ ThemeData aganTheme(Brightness brightness) {
     textTheme: base.textTheme.apply(fontFamily: 'Roboto').copyWith(
       headlineSmall: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: -.7),
       titleLarge: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.5),
-      titleMedium: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+      titleMedium: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -.22),
+      titleSmall: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: -.1),
+      bodyLarge: const TextStyle(fontSize: 15.5, height: 1.42, letterSpacing: -.1),
+      bodyMedium: const TextStyle(fontSize: 13.5, height: 1.45, letterSpacing: -.1),
+      labelLarge: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, letterSpacing: 0),
+      labelMedium: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
     ),
   );
 }

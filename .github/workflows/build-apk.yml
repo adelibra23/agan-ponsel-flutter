@@ -54,7 +54,7 @@ jobs:
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-v0.5.0-Build7-APK
+          name: AGAN-PONSEL-v0.6.0-Build9-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14

@@ -2,6 +2,7 @@ import '../../core/format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/pin_security.dart';
+import '../../services/biometric_security.dart';
 import '../../core/theme.dart';
 import '../../widgets/kit.dart';
 
@@ -70,7 +71,27 @@ class PinUnlockScreen extends StatefulWidget {
 class _PinUnlockScreenState extends State<PinUnlockScreen> {
   final code = TextEditingController();
   bool busy = false;
+  bool biometricsReady = false;
   String message = 'Masukkan PIN 6 digit untuk membuka aplikasi';
+
+  @override
+  void initState() { super.initState(); checkBiometrics(); }
+  Future<void> checkBiometrics() async {
+    final enabled = await BiometricSecurity.isEnabled;
+    final available = enabled && await BiometricSecurity.available;
+    if (mounted) setState(() => biometricsReady = available);
+  }
+
+  Future<void> unlockBiometric() async {
+    if (busy || !biometricsReady) return;
+    setState(() => busy = true);
+    try {
+      final success = await BiometricSecurity.authenticate();
+      if (!mounted) return;
+      if (success) { widget.onUnlocked(); return; }
+      setState(() => message = 'Verifikasi gagal; gunakan PIN atau coba lagi.');
+    } finally { if (mounted) setState(() => busy = false); }
+  }
 
   @override
   void dispose() { code.dispose(); super.dispose(); }
@@ -116,6 +137,12 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
         FilledButton.icon(onPressed: busy ? null : unlock,
           icon: const Icon(Icons.lock_open_rounded),
           label: Text(busy ? 'Memverifikasi...' : 'Buka Aplikasi')),
+        if (biometricsReady) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(onPressed: busy ? null : unlockBiometric,
+            icon: const Icon(Icons.fingerprint_rounded),
+            label: const Text('Buka dengan Biometrik')),
+        ],
         const SizedBox(height: 18),
         const Text('PIN lokal tidak mengenkripsi database maupun backup.\nJangan bagikan PIN dan simpan backup dengan aman.',
           textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.grey)),
@@ -136,12 +163,18 @@ class _PinSettingsScreenState extends State<PinSettingsScreen> {
   final confirmPin = TextEditingController();
   bool enabled = false;
   bool busy = false;
+  bool biometricsEnabled = false;
+  bool biometricsAvailable = false;
 
   @override
   void initState() { super.initState(); refresh(); }
   Future<void> refresh() async {
     final value = await PinSecurity.enabled;
-    if (mounted) setState(() => enabled = value);
+    final biometric = await BiometricSecurity.isEnabled;
+    final available = await BiometricSecurity.available;
+    if (mounted) setState(() {
+      enabled = value; biometricsEnabled = biometric; biometricsAvailable = available;
+    });
   }
   @override
   void dispose() { oldPin.dispose(); newPin.dispose(); confirmPin.dispose(); super.dispose(); }
@@ -172,6 +205,21 @@ class _PinSettingsScreenState extends State<PinSettingsScreen> {
       }
     } catch (e) {
       if (mounted) notify(context, 'Tidak berhasil: $e');
+    } finally { if (mounted) setState(() => busy = false); }
+  }
+
+  Future<void> toggleBiometrics(bool value) async {
+    setState(() => busy = true);
+    try {
+      if (value) {
+        final result = await BiometricSecurity.enable();
+        if (mounted) notify(context, result ? 'Biometrik diaktifkan' :
+          'Verifikasi gagal. Pastikan PIN aktif dan biometrik disiapkan di Android.');
+      } else {
+        await BiometricSecurity.disable();
+        if (mounted) notify(context, 'Biometrik dinonaktifkan');
+      }
+      await refresh();
     } finally { if (mounted) setState(() => busy = false); }
   }
 
@@ -209,6 +257,18 @@ class _PinSettingsScreenState extends State<PinSettingsScreen> {
             icon: const Icon(Icons.lock_open_rounded), label: const Text('Nonaktifkan PIN')),
         ],
       ])),
+      const SizedBox(height: 15),
+      Surface(child: SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        secondary: const Icon(Icons.fingerprint_rounded, color: brandBlue),
+        title: const Text('Buka dengan Biometrik',
+          style: TextStyle(fontWeight: FontWeight.w800)),
+        subtitle: Text(biometricsAvailable
+          ? 'Wajah atau sidik jari, sesuai kemampuan perangkat Android'
+          : 'Belum tersedia; siapkan biometrik di Pengaturan Android'),
+        value: biometricsEnabled && enabled,
+        onChanged: !enabled || !biometricsAvailable || busy ? null : toggleBiometrics,
+      )),
       const SizedBox(height: 15),
       const Surface(child: Text('Keamanan: PIN disimpan sebagai hash dengan salt, dan 5 percobaan gagal akan menyebabkan jeda 30 detik. PIN hanya membatasi akses dari UI, tidak mengamankan data terhadap perangkat yang di-root atau backup yang disalin. Jika PIN lupa, pemulihan melalui aplikasi belum tersedia.')),
     ]),
