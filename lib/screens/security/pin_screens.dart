@@ -1,3 +1,4 @@
+import '../../core/format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/pin_security.dart';

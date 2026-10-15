@@ -19,7 +19,7 @@ class PinSecurity {
   static bool valid(String pin) => RegExp(r'^\d{6}$').hasMatch(pin);
 
   static String _slowHash(String data) {
-    var bytes = utf8.encode(data);
+    List<int> bytes = utf8.encode(data);
     for (var i = 0; i < 65000; i++) {
       bytes = sha256.convert(bytes).bytes;
     }
