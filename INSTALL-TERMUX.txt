@@ -1,21 +1,19 @@
-AGAN PONSEL Flutter v0.4.0 Build5
-================================
-1. Unduh ZIP ke folder Download HP.
-2. Buka Termux. Masuk ke proyek:
-   cd ~/agan-build/agan_ponsel_flutter
-3. Ekstrak file baru:
-   unzip -o /sdcard/Download/AGAN-PONSEL-Flutter-v0.4.0-Build5.zip
-4. Periksa perubahan:
-   git status --short
-5. Kirim semua kode sumber baru:
-   git add lib pubspec.yaml README.md .github/workflows/build-apk.yml scripts test INSTALL-TERMUX.txt
-   git commit -m "AGAN PONSEL Flutter v0.4.0 Build5"
-   git push origin main
-6. Di browser buka:
-   https://github.com/adelibra23/agan-ponsel-flutter/actions
-7. Tunggu centang hijau, unduh artifact APK, ekstrak ZIP, pasang app-release.apk.
+AGAN PONSEL Flutter v0.5.0 Build 7
+===============================
 
-PENTING: Jangan uninstall versi lama yang menyimpan data. Backup dari
-Pengaturan > Backup & Restore dulu. APK dari GitHub run berbeda mungkin
-tidak bisa memperbarui app terpasang jika belum menggunakan keystore
-rilis permanen yang sama. Uji dahulu tanpa data operasional penting.
+1. Download AGAN-PONSEL-Flutter-v0.5.0-Build7.zip ke folder Download Android.
+2. Buka Termux dan jalankan:
+
+cd ~/agan-build/agan_ponsel_flutter
+unzip -o "/sdcard/Download/AGAN-PONSEL-Flutter-v0.5.0-Build7.zip"
+git status --short
+git add lib pubspec.yaml scripts test .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt
+git commit -m "AGAN PONSEL Flutter v0.5.0 Build7 barcode foto PIN"
+git push origin main
+
+3. Buka GitHub -> repository agan-ponsel-flutter -> Actions.
+4. Pilih build terbaru -> jika hijau, buka Artifacts dan unduh APK.
+
+CATATAN: Pastikan database telah dibackup sebelum mengganti atau menghapus APK.
+Jangan uninstall versi lama untuk upgrade! Update APK butuh applicationId dan kunci tanda tangan yang sama.
+Jika GitHub Actions merah, lihat log error. File APK belum diverifikasi berjalan.

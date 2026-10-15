@@ -5,6 +5,7 @@ import '../core/theme.dart';
 import '../widgets/kit.dart';
 import 'pos.dart';
 import 'settings/settings_pages.dart';
+import 'security/pin_screens.dart';
 
 class MoreScreen extends StatelessWidget {
   final ValueChanged<Widget> open;
@@ -28,6 +29,9 @@ class MoreScreen extends StatelessWidget {
         title: 'Riwayat Penjualan', subtitle: 'Struk dan transaksi kasir', onTap: () => open(const SalesHistoryScreen())),
       _MenuItem(icon: Icons.swap_vert_circle_outlined, color: const Color(0xFFAD721E),
         title: 'Riwayat Stok', subtitle: 'Penambahan dan pengurangan stok', onTap: () => open(const StockHistoryScreen())),
+      _MenuItem(icon: Icons.lock_person_rounded, color: const Color(0xFF16A387),
+        title: 'Keamanan & PIN', subtitle: 'Kunci aplikasi dengan PIN 6 digit',
+        onTap: () => open(const PinSettingsScreen())),
       _MenuItem(icon: Icons.account_circle_outlined, color: const Color(0xFF2783DC),
         title: 'Akun & Profil', subtitle: 'Identitas pengelola dan toko offline',
         onTap: () => open(const AccountSettingsScreen())),
@@ -506,6 +510,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ])),
         ])),
       const SizedBox(height: 22),
+      const SectionTitle('Keamanan aplikasi'),
+      _MenuItem(icon: Icons.shield_rounded, color: const Color(0xFF13A283),
+        title: 'Kunci Aplikasi & PIN', subtitle: 'Aktifkan atau ubah PIN lokal',
+        onTap: () => go(const PinSettingsScreen())),
+      const SizedBox(height: 14),
       const SectionTitle('Akun & identitas toko'),
       SettingsCard(icon: Icons.manage_accounts_rounded, color: brandBlue,
         title: 'Pengaturan Akun', subtitle: 'Profil lokal, nomor kontak, alamat dan footer struk',

@@ -63,37 +63,58 @@ class BrandHeader extends StatelessWidget {
   final String subheading;
   final VoidCallback onSearch;
   final VoidCallback onAlerts;
+  final VoidCallback onScan;
   const BrandHeader({super.key, required this.section, required this.subheading,
-    required this.onSearch, required this.onAlerts});
+    required this.onSearch, required this.onAlerts, required this.onScan});
 
   @override
   Widget build(BuildContext context) => Container(
     decoration: const BoxDecoration(
       gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFF0639BA), brandBlue, Color(0xFF048FEE)]),
+        colors: [Color(0xFF052B8C), Color(0xFF075FD4), Color(0xFF02A0F0)]),
       borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
     ),
     child: Stack(children: [
-      Positioned(right: -25, top: -70, child: Container(height: 185, width: 185,
-        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white.withOpacity(.08), width: 24)))),
-      Positioned(left: 155, bottom: -65, child: Container(height: 128, width: 128,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: brandCyan.withOpacity(.09)))),
-      Padding(padding: const EdgeInsets.fromLTRB(16, 12, 12, 16), child: Row(children: [
-        const AnimatedBrandMark(size: 53),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('AGAN PONSEL', maxLines: 1, style: TextStyle(
-            color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: -.5, fontSize: 20)),
-          const SizedBox(height: 2),
-          AnimatedSwitcher(duration: const Duration(milliseconds: 240),
-            transitionBuilder: (c, a) => FadeTransition(opacity: a, child: c),
-            child: Text(section == 'Beranda' ? 'HP • SERVICE • DIGITAL' : subheading,
-              key: ValueKey(section), maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white.withOpacity(.84), fontSize: 10.5, letterSpacing: .8))),
-        ])),
-        _HeaderButton(icon: Icons.search_rounded, onPressed: onSearch),
-        const SizedBox(width: 2),
-        _HeaderButton(icon: Icons.notifications_none_rounded, onPressed: onAlerts),
+      Positioned(right: -50, top: -88, child: Container(height: 188, width: 188,
+        decoration: BoxDecoration(shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(.12), width: 31)))),
+      Positioned(right: 82, bottom: -65, child: Container(height: 138, width: 138,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: brandCyan.withOpacity(.11)))),
+      Padding(padding: const EdgeInsets.fromLTRB(15, 12, 12, 13), child: Column(children: [
+        Row(children: [
+          const AnimatedBrandMark(size: 46),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
+              child: Text('AGAN PONSEL', style: TextStyle(color: Colors.white,
+                fontWeight: FontWeight.w900, letterSpacing: -.65, fontSize: 20))),
+            const SizedBox(height: 4),
+            const Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.circle, size: 6, color: Color(0xFF5BFFBD)),
+              SizedBox(width: 5),
+              Text('OFFLINE • LOCAL FIRST', style: TextStyle(color: Colors.white70,
+                fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .45)),
+            ]),
+          ])),
+          _HeaderButton(icon: Icons.qr_code_scanner_rounded, onPressed: onScan),
+          const SizedBox(width: 2),
+          _HeaderButton(icon: Icons.search_rounded, onPressed: onSearch),
+          const SizedBox(width: 2),
+          _HeaderButton(icon: Icons.notifications_none_rounded, onPressed: onAlerts),
+        ]),
+        const SizedBox(height: 12),
+        Row(children: [
+          Container(width: 4, height: 17, decoration: BoxDecoration(
+            color: brandCyan, borderRadius: BorderRadius.circular(10))),
+          const SizedBox(width: 9),
+          Expanded(child: AnimatedSwitcher(duration: const Duration(milliseconds: 240),
+            child: Text(section == 'Beranda' ? 'Dashboard & aktivitas toko' : subheading,
+              key: ValueKey(section), style: const TextStyle(color: Colors.white,
+                fontSize: 12, fontWeight: FontWeight.w700)))),
+          const Icon(Icons.shield_rounded, color: Color(0xFF83F4DA), size: 15),
+          const SizedBox(width: 4),
+          const Text('Data lokal', style: TextStyle(fontSize: 10, color: Colors.white70)),
+        ]),
       ])),
     ]),
   );
@@ -106,9 +127,11 @@ class _HeaderButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IconButton(
     visualDensity: VisualDensity.compact,
+    constraints: const BoxConstraints(minWidth: 34, minHeight: 36),
+    padding: const EdgeInsets.all(6),
     style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(.12)),
     color: Colors.white,
-    onPressed: onPressed, icon: Icon(icon, size: 23),
+    onPressed: onPressed, icon: Icon(icon, size: 20),
   );
 }
 

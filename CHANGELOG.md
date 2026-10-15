@@ -1,13 +1,16 @@
-# Changelog
+# AGAN PONSEL Flutter — Changelog
 
-## v0.4.0 Build 5 (2026-10-15)
+## v0.5.0 Build 7 (15 Oktober 2026)
 
-- SQLite v4, safe migration from v1-v3, 12 new service fields, indexed service event history.
-- Modern Service Center tabs and service intake form with 3 tab steps.
-- Service payment and status editing, service timeline, copy + Bluetooth print ticket.
-- New Account & Shop Settings with local profile and receipt footer.
-- SQLite JSON backup/restore with SHA-256 checksum, preview, destructive-action confirmation, atomic table restore.
-- Paired Bluetooth Classic thermal printer support, ESC/POS text, 58/80 mm, test print, receipt output.
-- SQLite diagnostics page, About page, animated settings header and menu cards.
-- CI: generate Android platform, inject Bluetooth manifest permissions, remove incompatible generated Flutter counter test, analyze, format, basic unit test, build artifact.
-- Caveat: Needs Flutter CI and physical-device validation. No production release signing yet.
+- Header biru premium baru, tombol scan cepat, indikator *offline*, aksen cyan, dan animasi AG Orbit.
+- Barcode/QR scanner kamera offline dari produk, kasir, dan header. Isi kode secara manual jika kamera tidak tersedia.
+- Foto produk dari galeri atau kamera disimpan privat di Android dan tampil di daftar produk dan kasir.
+- SQLite schema v5: kolom `photo_file`, indeks lama dipertahankan; pemeriksaan barcode/SKU ganda.
+- Pembuatan kode SKU otomatis dan kalkulasi estimasi laba per unit pada editor produk.
+- Kunci aplikasi PIN 6 digit: hash salted, perlambat brute force, batas percobaan, kunci setelah dari latar belakang 20 detik.
+- Backup JSON versi 2 menyertakan file foto produk dalam payload, dukungan restore backup v4 lama, validasi nama file dan ukuran.
+- Permission kamera dan Android minSdk 24 dikonfigurasi oleh skrip idempotent di CI.
+- Unit test dasar untuk format PIN dan nama foto aman.
+
+Keamanan: PIN hanya melindungi antarmuka, **tidak mengenkripsi SQLite**. Backup JSON juga tidak terenkripsi.
+Status: paket source disiapkan dan diperiksa secara statis; hasil Flutter analyzer / build APK belum diverifikasi.

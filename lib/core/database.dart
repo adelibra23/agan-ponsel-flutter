@@ -7,6 +7,7 @@ class Product {
   final String name;
   final String category;
   final String sku;
+  final String photoFile;
   final int stock;
   final int minStock;
   final int cost;
@@ -17,6 +18,7 @@ class Product {
     required this.name,
     required this.category,
     required this.sku,
+    this.photoFile = '',
     required this.stock,
     required this.minStock,
     required this.cost,
@@ -28,6 +30,7 @@ class Product {
         name: v['name'] as String,
         category: v['category'] as String? ?? 'Aksesoris',
         sku: v['sku'] as String? ?? '',
+        photoFile: v['photo_file'] as String? ?? '',
         stock: v['stock'] as int,
         minStock: v['min_stock'] as int? ?? 5,
         cost: v['cost'] as int,
@@ -77,11 +80,12 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
         await _createServiceExtras(db);
+        await _createPhotoExtras(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -93,6 +97,9 @@ class AppDatabase {
         }
         if (oldVersion < 4) {
           await _createServiceExtras(db);
+        }
+        if (oldVersion < 5) {
+          await _createPhotoExtras(db);
         }
       },
     );
@@ -134,8 +141,26 @@ class AppDatabase {
   }
 
 
+  // Version 5: optional product images; keep existing rows intact.
+  static Future<void> _createPhotoExtras(DatabaseExecutor db) async {
+    final columns = (await db.rawQuery('PRAGMA table_info(products)'))
+      .map((row) => row['name'] as String).toSet();
+    if (!columns.contains('photo_file')) {
+      await db.execute("ALTER TABLE products ADD COLUMN photo_file TEXT NOT NULL DEFAULT ''");
+    }
+    // A unique index cannot be created over legacy SKU data (possible duplicates).
+    // New writes are instead checked against existing rows in saveProduct().
+  }
+
+  static Future<Product?> byBarcode(String value) async {
+    final code = value.trim();
+    if (code.isEmpty) return null;
+    final matches = await (await instance).query('products',
+      where: 'sku = ? COLLATE NOCASE', whereArgs: [code], limit: 1);
+    return matches.isEmpty ? null : Product.from(matches.first);
+  }
+
   // Version 4: service intake fields, status history, partial payments.
-  // ALTER TABLE is guarded so it also works for databases upgraded from v1/v2.
   static Future<void> _createServiceExtras(DatabaseExecutor db) async {
     final columns = (await db.rawQuery('PRAGMA table_info(services)'))
         .map((row) => row['name'] as String).toSet();
@@ -233,17 +258,25 @@ class AppDatabase {
     required String name,
     required String category,
     required String sku,
+    String photoFile = '',
     required int stock,
     required int minStock,
     required int cost,
     required int price,
   }) async {
     final d = await instance;
+    if (sku.trim().isNotEmpty) {
+      final dup = await d.query('products',
+        where: id == null ? 'sku = ? COLLATE NOCASE' : 'sku = ? COLLATE NOCASE AND id != ?',
+        whereArgs: id == null ? [sku.trim()] : [sku.trim(), id], limit: 1);
+      if (dup.isNotEmpty) throw StateError('Kode barcode/SKU sudah digunakan produk lain');
+    }
     await d.transaction((txn) async {
       final data = <String, Object?>{
         'name': name,
         'category': category,
-        'sku': sku,
+        'sku': sku.trim(),
+        'photo_file': photoFile,
         'stock': stock,
         'min_stock': minStock,
         'cost': cost,

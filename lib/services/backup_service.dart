@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
+import 'package:path/path.dart' as p;
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
@@ -7,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../core/database.dart';
+import 'product_photos.dart';
 
 /// A portable, integrity-checked snapshot of the on-device SQLite database.
 /// Backups are NOT encrypted. Keep them in a private, trusted location.
@@ -37,6 +41,18 @@ class BackupService {
       }
       return output;
     });
+    // Include locally stored product photos in the portable backup.
+    final media = <String, String>{};
+    final productRows = records['products'] as List<Map<String, Object?>>;
+    for (final item in productRows) {
+      final name = item['photo_file'] as String? ?? '';
+      if (name.isEmpty || media.containsKey(name)) continue;
+      final file = await ProductPhotos.file(name);
+      if (file == null) throw StateError('Foto produk tidak ditemukan: $name');
+      final data = await file.readAsBytes();
+      if (data.length > 3 * 1024 * 1024) throw StateError('Foto terlalu besar: $name');
+      media[name] = base64Encode(data);
+    }
     final prefs = await SharedPreferences.getInstance();
     final profile = <String, String>{};
     for (final key in profileKeys) {
@@ -45,10 +61,11 @@ class BackupService {
     }
     return <String, dynamic>{
       'format': 'agan-ponsel-sqlite-json',
-      'formatVersion': 1,
-      'databaseVersion': 4,
+      'formatVersion': 2,
+      'databaseVersion': 5,
       'createdAt': DateTime.now().toIso8601String(),
       'tables': records,
+      'media': media,
       'profile': profile,
     };
   }
@@ -91,10 +108,10 @@ class BackupService {
     if (sha256.convert(utf8.encode(jsonEncode(payload))).toString() != hash) {
       throw const FormatException('Integritas backup tidak cocok (SHA-256)');
     }
-    if (payload['format'] != 'agan-ponsel-sqlite-json' || payload['formatVersion'] != 1) {
+    if (payload['format'] != 'agan-ponsel-sqlite-json' || ![1, 2].contains(payload['formatVersion'])) {
       throw const FormatException('Format atau versi backup tidak didukung');
     }
-    if (payload['databaseVersion'] != 4) {
+    if (![4, 5].contains(payload['databaseVersion'])) {
       throw const FormatException('Backup memerlukan versi database yang berbeda');
     }
     final rawTables = payload['tables'];
@@ -137,33 +154,84 @@ class BackupService {
         if (value is String) profile[key] = value;
       }
     }
+    final media = <String, List<int>>{};
+    final rawMedia = payload['media'];
+    if (rawMedia != null) {
+      if (rawMedia is! Map<String, dynamic>) {
+        throw const FormatException('Foto backup tidak valid');
+      }
+      int sum = 0;
+      for (final record in rawMedia.entries) {
+        final name = record.key;
+        if (!ProductPhotos.validName(name) || record.value is! String) {
+          throw FormatException('Nama atau format foto tidak aman: $name');
+        }
+        final bytes = base64Decode(record.value as String);
+        sum += bytes.length;
+        if (bytes.length > 3 * 1024 * 1024 || sum > 40 * 1024 * 1024) {
+          throw const FormatException('Ukuran media backup terlalu besar');
+        }
+        media[name] = bytes;
+      }
+    }
+    for (final row in validated['products'] ?? const <Map<String, Object?>>[]) {
+      final filename = row['photo_file'] as String? ?? '';
+      if (filename.isNotEmpty && !media.containsKey(filename)) {
+        throw FormatException('File foto tidak lengkap: $filename');
+      }
+    }
     return BackupPreview(
       filename: file.name,
       createdAt: '${payload['createdAt'] ?? '-'}',
       data: validated,
       profile: profile,
+      media: media,
     );
   }
 
   static Future<void> restore(BackupPreview backup) async {
     final db = await AppDatabase.instance;
-    await db.transaction((txn) async {
-      // Delete dependents first. Never DROP tables or schema/migration metadata.
-      for (final name in tables.reversed) {
-        await txn.delete(name);
+    final photoDirectory = await ProductPhotos.directory();
+    final remapped = <String, String>{};
+    final written = <File>[];
+    try {
+      // Stage files under NEW randomized names to avoid overwriting photos
+      // referenced by the current database if the SQL transaction fails.
+      final rng = Random.secure();
+      for (final media in backup.media.entries) {
+        final replacement = 'product_${DateTime.now().microsecondsSinceEpoch}_'
+          '${rng.nextInt(0x7fffffff).toRadixString(36)}.jpg';
+        final file = File(p.join(photoDirectory.path, replacement));
+        await file.writeAsBytes(media.value, flush: true);
+        remapped[media.key] = replacement;
+        written.add(file);
       }
-      // Parents first. All inserts occur in one atomic SQLite transaction.
-      for (final name in tables) {
-        for (final row in backup.data[name] ?? const <Map<String, Object?>>[]) {
-          await txn.insert(name, row, conflictAlgorithm: ConflictAlgorithm.abort);
+      await db.transaction((txn) async {
+        // Delete dependents first; preserve schema & database version.
+        for (final name in tables.reversed) { await txn.delete(name); }
+        for (final name in tables) {
+          for (final original in backup.data[name] ?? const <Map<String, Object?>>[]) {
+            final row = Map<String, Object?>.from(original);
+            if (name == 'products') {
+              final oldName = row['photo_file'] as String? ?? '';
+              if (oldName.isNotEmpty) row['photo_file'] = remapped[oldName];
+            }
+            await txn.insert(name, row, conflictAlgorithm: ConflictAlgorithm.abort);
+          }
         }
+      });
+    } catch (_) {
+      for (final file in written) {
+        if (await file.exists()) await file.delete();
       }
-    });
+      rethrow;
+    }
     final prefs = await SharedPreferences.getInstance();
     for (final entry in backup.profile.entries) {
       await prefs.setString(entry.key, entry.value);
     }
   }
+
 }
 
 class BackupPreview {
@@ -171,11 +239,13 @@ class BackupPreview {
   final String createdAt;
   final Map<String, List<Map<String, Object?>>> data;
   final Map<String, String> profile;
+  final Map<String, List<int>> media;
   const BackupPreview({
     required this.filename,
     required this.createdAt,
     required this.data,
     required this.profile,
+    required this.media,
   });
   int get count => data.values.fold<int>(0, (total, rows) => total + rows.length);
   int countOf(String table) => data[table]?.length ?? 0;

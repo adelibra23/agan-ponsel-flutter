@@ -1,71 +1,42 @@
-# AGAN PONSEL — Flutter Offline v0.4.0 Build 5
+# AGAN PONSEL Flutter Offline v0.5.0 Build 7
 
-Aplikasi Android berbasis **Dart + Flutter** dengan database lokal **SQLite**. Source code ini melanjutkan versi 0.3.0 dan menggunakan desain AG Orbit (header biru dengan animasi) serta navigasi bawah modern.
+Aplikasi Android Flutter (Dart) untuk operasional toko AGAN PONSEL, dengan SQLite lokal.
+**Source-only; build dan pengujian perangkat masih diperlukan.**
 
-## Fitur pada source
+## Desain & alur
+- Header baru: AG Orbit, gradasi biru ke cyan, indikator *offline*, tombol scan cepat, cari, stok menipis.
+- Bottom navigation animasi Beranda, Kasir, Produk, Service, Lainnya.
+- Kasir multi-item, diskon, struk, printer ESC/POS Bluetooth Classic (memerlukan printer yang kompatibel).
+- Service HP bertahap, status, histori, pembayaran, teknisi dan estimasi selesai.
+- Profil lokal, keuangan, laporan, stok, transaksi digital (pencatatan saja).
 
-- Dashboard, penjualan keranjang multi-produk, diskon, metode pembayaran, struk dan riwayat penjualan.
-- Produk, kategori, SKU, stok minimum, catatan pergerakan stok.
-- **Service Baru** dalam 3 tab: Pelanggan, Perangkat, Biaya & Jadwal.
-- Detail Service: IMEI, aksesoris yang ditinggalkan, kondisi perangkat, teknisi, prioritas, estimasi, DP/pelunasan, target selesai, garansi dan riwayat status.
-- **Backup & Restore data SQLite** berupa snapshot JSON yang disimpan di lokasi pilihan pengguna dengan checksum SHA-256, pratinjau data, dan konfirmasi sebelum overwrite. Restore dijalankan dalam transaksi SQLite (gagal => rollback).
-- **Printer thermal Bluetooth Classic ESC/POS** (umumnya 58 mm/80 mm). Daftar printer yang sudah dipasangkan, koneksi, ukuran kertas, test print, struk penjualan dan tiket service. Membutuhkan permission Bluetooth pada Android 12+.
-- **Pengaturan akun lokal** (nama pengelola, telepon, email, nama/alamat toko, footer struk), tema, informasi SQLite (jumlah baris, integritas), Tentang Aplikasi.
-- Pencatatan offline transaksi pulsa/topup/transfer (tidak mengeksekusi transaksi eksternal secara nyata).
+## Fitur baru
+1. **Scan barcode**: menu Produk & Stok atau Kasir -> tombol pemindai. CameraX ML Kit berjalan offline. Mendukung EAN, UPC, QR, ITF dan Code 128.
+2. **Foto produk**: tambah/edit produk -> ambil dari galeri atau kamera. Foto disimpan pada dokumen privat Android; tidak diupload ke internet.
+3. **SKU cerdas**: tombol otomatis atau scan label. Duplikat kode ditolak untuk produk berbeda.
+4. **Keamanan & PIN**: Menu Lainnya / Pengaturan -> Keamanan & PIN. PIN 6 digit (salted iterative SHA-256), jeda 30 detik setelah 5 percobaan salah. Mengunci saat masuk aplikasi dan setelah 20 detik di latar belakang.
+5. **Backup & Restore**: foto ikut masuk ke JSON backup v2 (dengan SHA-256). Restore dapat membaca backup v1 dari database v4, tetapi foto tidak ada pada backup lama. Batas total file backup 50MB; jangan gunakan backup JSON sebagai berkas terenkripsi.
+6. **Laba/unit** ditampilkan saat mengubah harga modal dan jual.
 
-## Privasi data dan peringatan penting
+## Struktur data / migrasi
+SQLite `agan_ponsel_v1.db` tidak dihapus, versi skema naik 4->5, menambah satu kolom `products.photo_file` dengan default string kosong. Data lama tetap digunakan.
 
-1. Backup adalah **ekspor JSON dari seluruh tabel SQLite**, bukan file mentah `.db` (lebih portabel untuk import). Backup mengandung data pelanggan, IMEI, dan transaksi **dalam teks biasa tanpa enkripsi**. Simpan di penyimpanan yang dipercaya dan jangan bagikan sembarangan. SHA-256 hanya untuk memeriksa kesalahan/perubahan isi, bukan perlindungan dari orang yang mengubah file dengan sengaja.
-2. Restore secara sengaja **mengganti semua data toko pada Android ini**. Ekspor backup terkini terlebih dahulu; lalu pilih file backup, tinjau, dan ketik `PULIHKAN`. Jika impor gagal saat transaksi SQLite, data sebelumnya tidak akan terhapus secara parsial.
-3. **Jangan uninstall atau Clear storage** tanpa memiliki backup yang sudah diuji. Data SQLite di penyimpanan privat aplikasi bisa hilang saat aplikasi dihapus.
-4. Pada workflow ini, `flutter build apk --release` menggunakan penandatanganan standar proyek Flutter yang dibuat saat build. **Jangan menganggap APK GitHub dari run yang berbeda bisa saling memperbarui** tanpa keystore rilis permanen yang sama. Android menolak update APK dengan signature yang berbeda. Siapkan release signing permanen sebelum penggunaan produksi dan sebelum menaruh data toko penting di aplikasi.
-5. Printer harus berpasangan lewat menu Bluetooth Android terlebih dahulu dan memakai **Bluetooth Classic/Serial Port Profile + ESC/POS**. Tidak semua printer Bluetooth kompatibel; uji pada printer dan Android sebenarnya. Tidak ada jaminan cetak pada semua model.
-6. Pengaturan akun ini adalah **profil lokal**, bukan autentikasi cloud atau sistem multi-kasir. Fitur PIN/pemisahan akses akun belum tersedia di Build 5.
-7. Fitur dibuat tetapi **belum diuji berhasil dikompilasi sebagai APK maupun diuji pada printer sungguhan** dalam lingkungan pengembangan. Verifikasi pada GitHub Actions dan HP sebelum dipakai di toko.
+## Keamanan dan keterbatasan
+- PIN hanya mengunci antarmuka; tidak mengenkripsi SQLite, data gambar, atau backup JSON.
+- Smartphone dengan akses root dapat membuka data lokal. Tanpa server, lupa PIN tidak bisa direset lewat email.
+- Backup berisi data pelanggan/IMEI/foto, simpan hanya di lokasi tepercaya.
+- Barcode scanner kamera dan printer Bluetooth wajib diuji pada HP Android dan perangkat fisik.
+- **APK belum dikompilasi maupun dites di sesi ini**. GitHub Actions akan memvalidasi.
+- Jangan uninstall versi lama yang berisi data; backup sebelum migrasi dan perhatikan tanda tangan APK.
 
-## Build dari Termux + GitHub Actions
+## Build APK memakai HP + Termux
+Lihat [INSTALL-TERMUX.txt](INSTALL-TERMUX.txt). Proses kompilasi dilakukan pada GitHub Actions, bukan langsung di Termux ARM64.
 
-Unduh `AGAN-PONSEL-Flutter-v0.4.0-Build5.zip` dan simpan di **Download** Android. Lalu jalankan:
-
-```bash
-cd ~/agan-build/agan_ponsel_flutter
-unzip -o /sdcard/Download/AGAN-PONSEL-Flutter-v0.4.0-Build5.zip
-
-git add lib pubspec.yaml README.md .github/workflows/build-apk.yml scripts test
-
-git commit -m "AGAN PONSEL Flutter v0.4.0 Build5"
-git push origin main
-```
-
-GitHub Actions akan menjalankan:
-
-1. `flutter create --platforms=android --project-name agan_ponsel .`
-2. `python3 scripts/prepare_android.py` — menambahkan izin Bluetooth dan menghapus pengujian counter default yang salah.
-3. `flutter pub get`, `dart format lib test`, `flutter analyze`.
-4. `flutter test test/format_test.dart`.
-5. `flutter build apk --release` dan upload artifact `AGAN-PONSEL-v0.4.0-Build5-APK`.
-
-Jika build berhasil, unduh ZIP artifact dari tab **Actions** dan ekstrak file `app-release.apk` sebelum instal. Jika gagal, baca error di job `Flutter Android APK`.
-
-## Build di PC (alternatif)
-
-Syarat: Flutter SDK, Android SDK, JDK 17. Pada folder source:
-
-```bash
-flutter create --platforms=android --project-name agan_ponsel .
-python3 scripts/prepare_android.py
-flutter pub get
-flutter analyze --no-fatal-warnings --no-fatal-infos
-flutter test test/format_test.dart
-flutter build apk --release
-```
-
-## Penyimpanan dan migrasi
-
-Nama database lokal tetap `agan_ponsel_v1.db`, sehingga SQLite lama versi 1/2/3 dapat **dimigrasikan ke skema v4**, termasuk kolom penerimaan service dan tabel `service_events`. Migrasi hanya berjalan jika data aplikasi lama masih ada dan aplikasi baru memiliki **package name serta signature yang kompatibel**. Skema database tidak direset saat upgrade. Migrasi tidak menjamin pemulihan jika APK sebelumnya di-uninstall.
-
-## Tautan
-
-Repository GitHub pengguna: `https://github.com/adelibra23/agan-ponsel-flutter`
-
-Informasi paket: https://pub.dev/packages/file_picker, https://pub.dev/packages/print_bluetooth_thermal, https://pub.dev/packages/permission_handler.
+## Developer build
+`flutter create --platforms=android --project-name agan_ponsel .`
+`python3 scripts/prepare_android.py`
+`flutter pub get`
+`dart format lib test`
+`flutter analyze --no-fatal-infos --no-fatal-warnings`
+`flutter test test/format_test.dart test/feature_test.dart`
+`flutter build apk --release`

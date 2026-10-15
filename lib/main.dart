@@ -11,6 +11,8 @@ import 'screens/pos.dart';
 import 'screens/inventory.dart';
 import 'screens/services.dart';
 import 'screens/others.dart';
+import 'screens/barcode_scanner.dart';
+import 'screens/security/pin_screens.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +42,7 @@ class _AganAppState extends State<AganApp> {
     theme: aganTheme(Brightness.light),
     darkTheme: aganTheme(Brightness.dark),
     themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+    builder: (context, navigator) => PinGate(child: navigator ?? const SizedBox.shrink()),
     home: SplashGate(dark: dark, onThemeChanged: changeTheme),
   );
 }
@@ -60,6 +63,22 @@ class _AppShellState extends State<AppShell> {
   void open(Widget page) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => page));
     if (mounted) setState(() => refresh++);
+  }
+
+  Future<void> quickScan() async {
+    final code = await Navigator.of(context).push<String>(MaterialPageRoute(
+      builder: (_) => const BarcodeScannerScreen()));
+    if (!mounted || code == null) return;
+    final matched = await AppDatabase.byBarcode(code);
+    if (!mounted) return;
+    if (matched != null) {
+      open(Scaffold(appBar: AppBar(title: const Text('Kasir • hasil scan')),
+        body: PosScreen(initialBarcode: code)));
+    } else {
+      open(Scaffold(appBar: AppBar(title: const Text('Produk belum terdaftar')),
+        body: InventoryScreen(initialBarcode: code)));
+      notify(context, 'Barcode $code belum tersedia, silakan tambah produk.');
+    }
   }
 
   void alerts() async {
@@ -95,7 +114,7 @@ class _AppShellState extends State<AppShell> {
         body: SafeArea(bottom: false, child: Column(children: [
           BrandHeader(
             section: titles[selected], subheading: titles[selected],
-            onSearch: () => select(2), onAlerts: alerts,
+            onSearch: () => select(2), onAlerts: alerts, onScan: quickScan,
           ),
           Expanded(child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 350),
@@ -127,6 +146,7 @@ class SplashGate extends StatefulWidget {
 }
 
 class _SplashGateState extends State<SplashGate> with SingleTickerProviderStateMixin {
+  bool shown = true;
   late final AnimationController enter = AnimationController(
     vsync: this, duration: const Duration(milliseconds: 850));
   @override
@@ -134,20 +154,15 @@ class _SplashGateState extends State<SplashGate> with SingleTickerProviderStateM
     super.initState();
     enter.forward();
     Future<void>.delayed(const Duration(milliseconds: 1600), () {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(PageRouteBuilder<void>(
-        transitionDuration: const Duration(milliseconds: 450),
-        pageBuilder: (ctx, animation, secondaryAnimation) =>
-            AppShell(dark: widget.dark, onThemeChanged: widget.onThemeChanged),
-        transitionsBuilder: (ctx, animation, secondaryAnimation, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ));
+      if (mounted) setState(() => shown = false);
     });
   }
   @override
   void dispose() { enter.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
+  Widget build(BuildContext context) {
+    if (!shown) return AppShell(dark: widget.dark, onThemeChanged: widget.onThemeChanged);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
     value: SystemUiOverlayStyle.light,
     child: Scaffold(
       body: Container(
@@ -173,4 +188,5 @@ class _SplashGateState extends State<SplashGate> with SingleTickerProviderStateM
       ),
     ),
   );
+  }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'barcode_scanner.dart';
+import '../widgets/product_photo.dart';
 import 'package:flutter/services.dart';
 import '../core/database.dart';
 import '../services/printer_service.dart';
@@ -7,7 +9,8 @@ import '../core/theme.dart';
 import '../widgets/kit.dart';
 
 class PosScreen extends StatefulWidget {
-  const PosScreen({super.key});
+  final String? initialBarcode;
+  const PosScreen({super.key, this.initialBarcode});
   @override
   State<PosScreen> createState() => _PosScreenState();
 }
@@ -20,10 +23,36 @@ class _PosScreenState extends State<PosScreen> {
   String search = '';
   String category = 'Semua';
   @override
-  void initState() { super.initState(); loader = AppDatabase.products(); }
+  void initState() {
+    super.initState();
+    loader = AppDatabase.products();
+    if (widget.initialBarcode != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) addBarcode(widget.initialBarcode!);
+      });
+    }
+  }
   void refresh() => setState(() => loader = AppDatabase.products());
   int get subtotal => cart.values.fold(0, (a, b) => a + b.total);
   int get units => cart.values.fold(0, (a, b) => a + b.quantity);
+
+  Future<void> addBarcode(String value) async {
+    final product = await AppDatabase.byBarcode(value);
+    if (!mounted) return;
+    if (product == null) {
+      notify(context, 'Barcode $value belum terdaftar di Produk & Stok');
+      return;
+    }
+    addProduct(product);
+    setState(() { category = 'Semua'; search = ''; });
+    notify(context, '${product.name} ditambahkan ke keranjang');
+  }
+
+  Future<void> scanProduct() async {
+    final code = await Navigator.of(context).push<String>(MaterialPageRoute(
+      builder: (_) => const BarcodeScannerScreen()));
+    if (code != null) await addBarcode(code);
+  }
 
   void addProduct(Product product) {
     final current = cart[product.id]?.quantity ?? 0;
@@ -104,7 +133,14 @@ class _PosScreenState extends State<PosScreen> {
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const PageIntro('Kasir & Penjualan', 'Pilih produk, kelola keranjang, bayar'),
-                SearchBox(hint: 'Cari nama atau kode produk...', onChanged: (v) => setState(() => search = v)),
+                Row(children: [
+                  Expanded(child: SearchBox(hint: 'Cari produk / barcode...',
+                    onChanged: (v) => setState(() => search = v))),
+                  const SizedBox(width: 9),
+                  IconButton.filledTonal(tooltip: 'Scan untuk tambah keranjang',
+                    onPressed: scanProduct,
+                    icon: const Icon(Icons.qr_code_scanner_rounded)),
+                ]),
                 const SizedBox(height: 12),
                 SingleChildScrollView(scrollDirection: Axis.horizontal,
                   child: Row(children: categories.map((item) => Padding(
@@ -163,13 +199,8 @@ class _ProductTile extends StatelessWidget {
     final out = product.stock <= 0;
     return Surface(padding: const EdgeInsets.all(12), child: Column(
       crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(child: Center(child: Container(
-          height: 64, width: 64, decoration: BoxDecoration(
-            color: brandBlue.withOpacity(.09), borderRadius: BorderRadius.circular(19)),
-          child: Icon(product.category == 'HP' ? Icons.smartphone_rounded :
-            product.category == 'Pulsa' ? Icons.sim_card_rounded : Icons.devices_other_rounded,
-            color: brandBlue, size: 31),
-        ))),
+        Expanded(child: Center(child: ProductPhoto(
+          filename: product.photoFile, size: 76, radius: 18))),
         Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
