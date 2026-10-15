@@ -1,42 +1,54 @@
-name: Build AGAN PONSEL APK
+name: Build AGAN PONSEL Flutter APK
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  android:
+    name: Flutter Android APK
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Install Java
-        uses: actions/setup-java@v4
+      - name: Install JDK 17
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Flutter
+      - name: Install Flutter stable
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - name: Generate Android project
-        run: |
-          flutter create --platforms=android --project-name agan_ponsel .
+      - name: Generate Android platform (if needed)
+        run: flutter create --platforms=android --project-name agan_ponsel .
 
-      - name: Install dependencies
+      - name: Download dependencies
         run: flutter pub get
 
-      - name: Build Android APK
+      - name: Format and check Dart syntax
+        run: dart format lib
+
+      - name: Analyze Flutter code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Build release APK
         run: flutter build apk --release
 
-      - name: Upload APK
+      - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-Android-APK
+          name: AGAN-PONSEL-v0.3.0-Build3-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
