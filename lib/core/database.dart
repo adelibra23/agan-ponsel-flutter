@@ -77,10 +77,11 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
+        await _createServiceExtras(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -89,6 +90,9 @@ class AppDatabase {
         if (oldVersion < 3) {
           await _addProductFields(db);
           await _createNew(db);
+        }
+        if (oldVersion < 4) {
+          await _createServiceExtras(db);
         }
       },
     );
@@ -127,6 +131,96 @@ class AppDatabase {
     await db.execute('CREATE TABLE IF NOT EXISTS stock_movements(id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL, product_name TEXT NOT NULL, delta INTEGER NOT NULL, note TEXT NOT NULL, created_at TEXT NOT NULL)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_receipts_created ON receipts(created_at)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_services_status ON services(status)');
+  }
+
+
+  // Version 4: service intake fields, status history, partial payments.
+  // ALTER TABLE is guarded so it also works for databases upgraded from v1/v2.
+  static Future<void> _createServiceExtras(DatabaseExecutor db) async {
+    final columns = (await db.rawQuery('PRAGMA table_info(services)'))
+        .map((row) => row['name'] as String).toSet();
+    const definitions = <String, String>{
+      'imei': "TEXT NOT NULL DEFAULT ''",
+      'accessories': "TEXT NOT NULL DEFAULT ''",
+      'technician': "TEXT NOT NULL DEFAULT ''",
+      'deposit': 'INTEGER NOT NULL DEFAULT 0',
+      'priority': "TEXT NOT NULL DEFAULT 'Normal'",
+      'due_at': "TEXT NOT NULL DEFAULT ''",
+      'notes': "TEXT NOT NULL DEFAULT ''",
+      'updated_at': "TEXT NOT NULL DEFAULT ''",
+      'completed_at': "TEXT NOT NULL DEFAULT ''",
+      'warranty_days': 'INTEGER NOT NULL DEFAULT 0',
+      'payment_status': "TEXT NOT NULL DEFAULT 'Belum Lunas'",
+      'collected_at': "TEXT NOT NULL DEFAULT ''",
+    };
+    for (final field in definitions.entries) {
+      if (!columns.contains(field.key)) {
+        await db.execute('ALTER TABLE services ADD COLUMN ${field.key} ${field.value}');
+      }
+    }
+    await db.execute('''CREATE TABLE IF NOT EXISTS service_events(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      service_id INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    )''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_service_events_service ON service_events(service_id)');
+  }
+
+  static Future<int> createService(Map<String, Object?> fields) async {
+    final db = await instance;
+    final now = DateTime.now().toIso8601String();
+    return db.transaction<int>((txn) async {
+      final id = await txn.insert('services', {
+        ...fields, 'status': 'Antrian', 'created_at': now, 'updated_at': now,
+      });
+      await txn.insert('service_events', {
+        'service_id': id, 'status': 'Antrian', 'note': 'Tiket service diterima', 'created_at': now,
+      });
+      return id;
+    });
+  }
+
+  static Future<void> changeServiceStatus(int id, String status, {String note = ''}) async {
+    final now = DateTime.now().toIso8601String();
+    final db = await instance;
+    await db.transaction((txn) async {
+      final matches = await txn.query('services', where: 'id=?', whereArgs: [id], limit: 1);
+      if (matches.isEmpty) throw StateError('Tiket service tidak ditemukan');
+      final before = matches.first['status'] as String;
+      final changes = <String, Object?>{'status': status, 'updated_at': now};
+      if (status == 'Selesai' && before != 'Selesai') changes['completed_at'] = now;
+      if (status == 'Diambil') changes['collected_at'] = now;
+      await txn.update('services', changes, where: 'id=?', whereArgs: [id]);
+      await txn.insert('service_events', {
+        'service_id': id, 'status': status, 'note': note.trim(), 'created_at': now,
+      });
+    });
+  }
+
+  static Future<void> updateServicePayment(int id, {required int fee, required int deposit}) async {
+    if (fee < 0 || deposit < 0 || deposit > fee) throw ArgumentError('Nominal pembayaran tidak valid');
+    final db = await instance;
+    final now = DateTime.now().toIso8601String();
+    await db.transaction((txn) async {
+      final matches = await txn.query('services', where: 'id=?', whereArgs: [id], limit: 1);
+      if (matches.isEmpty) throw StateError('Service tidak ditemukan');
+      await txn.update('services', {
+        'fee': fee, 'deposit': deposit,
+        'payment_status': fee > 0 && deposit >= fee ? 'Lunas' : 'Belum Lunas',
+        'updated_at': now,
+      }, where: 'id=?', whereArgs: [id]);
+      await txn.insert('service_events', {
+        'service_id': id, 'status': matches.first['status'],
+        'note': 'Biaya: $fee • Pembayaran: $deposit', 'created_at': now,
+      });
+    });
+  }
+
+  static Future<List<Map<String, Object?>>> serviceEvents(int id) async {
+    return (await instance).query('service_events', where: 'service_id=?',
+      whereArgs: [id], orderBy: 'id DESC');
   }
 
   static Future<List<Product>> products() async {
@@ -251,7 +345,7 @@ class AppDatabase {
     final expense = await aggregate('expenses', 'amount');
     final legacyCount = Sqflite.firstIntValue(await d.rawQuery('SELECT COUNT(*) FROM sales$filter')) ?? 0;
     final receiptCount = Sqflite.firstIntValue(await d.rawQuery('SELECT COUNT(*) FROM receipts$filter')) ?? 0;
-    final serviceCount = Sqflite.firstIntValue(await d.rawQuery("SELECT COUNT(*) FROM services WHERE status != 'Selesai'")) ?? 0;
+    final serviceCount = Sqflite.firstIntValue(await d.rawQuery("SELECT COUNT(*) FROM services WHERE status NOT IN ('Selesai', 'Diambil')")) ?? 0;
     final totalStockAlerts = Sqflite.firstIntValue(await d.rawQuery('SELECT COUNT(*) FROM products WHERE stock <= min_stock')) ?? 0;
     return {
       'revenue': oldRevenue + newRevenue,

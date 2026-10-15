@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/theme.dart';
 
 class AnimatedBrandMark extends StatefulWidget {
@@ -133,7 +134,7 @@ class AnimatedBottomBar extends StatelessWidget {
       child: SafeArea(top: false, child: Row(children: List.generate(labels.length, (i) {
         final active = i == index;
         return Expanded(child: InkWell(
-          onTap: () => onSelected(i),
+          onTap: () { HapticFeedback.selectionClick(); onSelected(i); },
           borderRadius: BorderRadius.circular(18),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             AnimatedContainer(duration: const Duration(milliseconds: 300),

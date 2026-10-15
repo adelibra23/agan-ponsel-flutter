@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/database.dart';
+import '../services/printer_service.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
 import '../widgets/kit.dart';
@@ -333,6 +334,15 @@ class ReceiptDetail extends StatelessWidget {
         await Clipboard.setData(ClipboardData(text: receiptText(result)));
         if (context.mounted) notify(context, 'Struk berhasil disalin');
       }, icon: const Icon(Icons.copy_rounded), label: const Text('Salin Struk')),
+      const SizedBox(height: 7),
+      OutlinedButton.icon(onPressed: () async {
+        try {
+          await AganPrinter.printSale(result);
+          if (context.mounted) notify(context, 'Struk berhasil dikirim ke printer');
+        } catch (e) {
+          if (context.mounted) notify(context, 'Gagal mencetak: $e. Atur printer di menu Pengaturan.');
+        }
+      }, icon: const Icon(Icons.print_rounded), label: const Text('Cetak via Printer Bluetooth')),
       const SizedBox(height: 5),
       TextButton(onPressed: () => Navigator.pop(context), child: const Text('Selesai')),
     ],

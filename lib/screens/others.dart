@@ -4,6 +4,7 @@ import '../core/format.dart';
 import '../core/theme.dart';
 import '../widgets/kit.dart';
 import 'pos.dart';
+import 'settings/settings_pages.dart';
 
 class MoreScreen extends StatelessWidget {
   final ValueChanged<Widget> open;
@@ -27,6 +28,15 @@ class MoreScreen extends StatelessWidget {
         title: 'Riwayat Penjualan', subtitle: 'Struk dan transaksi kasir', onTap: () => open(const SalesHistoryScreen())),
       _MenuItem(icon: Icons.swap_vert_circle_outlined, color: const Color(0xFFAD721E),
         title: 'Riwayat Stok', subtitle: 'Penambahan dan pengurangan stok', onTap: () => open(const StockHistoryScreen())),
+      _MenuItem(icon: Icons.account_circle_outlined, color: const Color(0xFF2783DC),
+        title: 'Akun & Profil', subtitle: 'Identitas pengelola dan toko offline',
+        onTap: () => open(const AccountSettingsScreen())),
+      _MenuItem(icon: Icons.backup_rounded, color: const Color(0xFF8054CB),
+        title: 'Backup & Restore', subtitle: 'Simpan data SQLite, pulihkan saat ganti HP',
+        onTap: () => open(const BackupRestoreScreen())),
+      _MenuItem(icon: Icons.print_rounded, color: const Color(0xFF2196B8),
+        title: 'Printer Bluetooth', subtitle: 'Hubungkan thermal printer 58/80 mm',
+        onTap: () => open(const BluetoothPrinterScreen())),
       _MenuItem(icon: Icons.settings_suggest_rounded, color: const Color(0xFF697E94),
         title: 'Pengaturan', subtitle: 'Tema, keamanan data dan aplikasi',
         onTap: () => open(SettingsScreen(dark: dark, onThemeChanged: onThemeChanged))),
@@ -470,6 +480,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late bool currentDark = widget.dark;
+  void go(Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   void changeTheme(bool value) {
     setState(() => currentDark = value);
     widget.onThemeChanged(value);
@@ -477,39 +488,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) => StorePage(title: 'Pengaturan',
-    child: ListView(padding: const EdgeInsets.all(16), children: [
-      Surface(child: Column(children: [
-        const ListTile(contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.storefront_rounded, color: brandBlue),
-          title: Text('AGAN PONSEL', style: TextStyle(fontWeight: FontWeight.w900)),
-          subtitle: Text('Flutter Offline v0.3.0 • Build 3')),
-        const Divider(),
-        SwitchListTile(contentPadding: EdgeInsets.zero,
-          secondary: Icon(currentDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded),
-          title: const Text('Tema Gelap', style: TextStyle(fontWeight: FontWeight.w800)),
-          subtitle: const Text('Pilihan tema tersimpan di HP'),
-          value: currentDark, onChanged: changeTheme),
-      ])),
-      const SizedBox(height: 15),
-      Surface(child: const Column(children: [
-        ListTile(contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.storage_rounded, color: brandBlue),
-          title: Text('Database SQLite'),
-          subtitle: Text('Data disimpan di penyimpanan privat aplikasi.')),
-        Divider(),
-        ListTile(contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.backup_outlined),
-          title: Text('Backup & Restore'),
-          subtitle: Text('Belum tersedia pada versi ini. Jangan uninstall sebelum membackup data.')),
-        Divider(),
-        ListTile(contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.print_outlined),
-          title: Text('Printer Bluetooth'),
-          subtitle: Text('Belum terintegrasi. Struk dapat disalin sebagai teks.')),
-      ])),
-      const SizedBox(height: 15),
-      Text('Penting: menghapus data aplikasi atau uninstall bisa menghapus database lokal. '
-        'Untuk transaksi bank, top up nyata, dan notifikasi WhatsApp tetap diperlukan koneksi / integrasi terpisah.',
+    child: ListView(padding: const EdgeInsets.fromLTRB(16, 17, 16, 35), children: [
+      Container(padding: const EdgeInsets.all(19),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(25),
+          gradient: const LinearGradient(colors: [Color(0xFF0735B1), Color(0xFF0E9AEF)])),
+        child: const Row(children: [
+          CircleAvatar(radius: 27, backgroundColor: Colors.white,
+            child: Text('AG', style: TextStyle(color: brandBlue,
+              fontSize: 19, fontWeight: FontWeight.w900))),
+          SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('AGAN PONSEL', style: TextStyle(fontWeight: FontWeight.w900,
+              fontSize: 21, color: Colors.white)),
+            SizedBox(height: 4),
+            Text('Flutter Offline • v0.4.0 Build 5',
+              style: TextStyle(color: Colors.white70, fontSize: 12)),
+          ])),
+        ])),
+      const SizedBox(height: 22),
+      const SectionTitle('Akun & identitas toko'),
+      SettingsCard(icon: Icons.manage_accounts_rounded, color: brandBlue,
+        title: 'Pengaturan Akun', subtitle: 'Profil lokal, nomor kontak, alamat dan footer struk',
+        onTap: () => go(const AccountSettingsScreen())),
+      const SizedBox(height: 12),
+      const SectionTitle('Penyimpanan & perangkat'),
+      SettingsCard(icon: Icons.backup_outlined, color: const Color(0xFF8751D1),
+        title: 'Backup & Restore', subtitle: 'Simpan dan pulihkan data SQLite',
+        onTap: () => go(const BackupRestoreScreen())),
+      SettingsCard(icon: Icons.print_rounded, color: const Color(0xFF189ABA),
+        title: 'Printer Bluetooth', subtitle: 'Printer thermal ESC/POS 58 mm atau 80 mm',
+        onTap: () => go(const BluetoothPrinterScreen())),
+      SettingsCard(icon: Icons.storage_rounded, color: const Color(0xFF28A578),
+        title: 'Database SQLite', subtitle: 'Periksa tabel, versi, dan integritas data lokal',
+        onTap: () => go(const DatabaseInfoScreen())),
+      const SizedBox(height: 12),
+      const SectionTitle('Tampilan & informasi'),
+      Surface(child: SwitchListTile(contentPadding: EdgeInsets.zero,
+        secondary: Icon(currentDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, color: brandBlue),
+        title: const Text('Mode Gelap', style: TextStyle(fontWeight: FontWeight.w800)),
+        subtitle: const Text('Tema mengikuti pilihan yang tersimpan'),
+        value: currentDark, onChanged: changeTheme)),
+      const SizedBox(height: 10),
+      SettingsCard(icon: Icons.info_outline_rounded, color: const Color(0xFF63748D),
+        title: 'Tentang Aplikasi', subtitle: 'Versi, fitur, privasi dan informasi penggunaan',
+        onTap: () => go(const AboutAganScreen())),
+      const SizedBox(height: 10),
+      Text('Data tersimpan di HP. Backup terlebih dahulu sebelum uninstall atau hapus data aplikasi.',
         style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
     ]));
 }

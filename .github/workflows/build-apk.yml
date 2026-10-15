@@ -12,7 +12,7 @@ jobs:
   android:
     name: Flutter Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
 
     steps:
       - name: Checkout source
@@ -33,17 +33,20 @@ jobs:
       - name: Generate Android platform (if needed)
         run: flutter create --platforms=android --project-name agan_ponsel .
 
-      - name: Download dependencies
+      - name: Configure Android permissions and remove sample tests
+        run: python3 scripts/prepare_android.py
+
+      - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Format and check Dart syntax
-        run: dart format lib
-
-      - name: Remove generated sample test
-        run: rm -f test/widget_test.dart
+      - name: Check Dart code formatting
+        run: dart format lib test
 
       - name: Analyze Flutter code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Run basic unit tests
+        run: flutter test test/format_test.dart
 
       - name: Build release APK
         run: flutter build apk --release
@@ -51,7 +54,7 @@ jobs:
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-v0.3.0-Build3-APK
+          name: AGAN-PONSEL-v0.4.0-Build5-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
