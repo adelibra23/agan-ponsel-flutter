@@ -1,7 +1,7 @@
 name: agan_ponsel
 description: AGAN PONSEL Android - dashboard, kasir, stok, service, laporan.
 publish_to: none
-version: 0.8.0+12
+version: 0.9.0+13
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -21,10 +21,36 @@ dependencies:
   path_provider: ^2.1.5
   flutter_contacts: ^1.1.9+2
   local_auth: ^2.3.0
+  http: ^1.4.0
+  flutter_secure_storage: ^9.2.4
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/branding/agan_launcher.png
+    - assets/branding/agan_foreground.png
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/branding/agan_launcher.png
+  adaptive_icon_background: "#091B4A"
+  adaptive_icon_foreground: assets/branding/agan_foreground.png
+  min_sdk_android: 24
+
+flutter_native_splash:
+  color: "#050F2A"
+  image: assets/branding/agan_launcher.png
+  android_12:
+    color: "#050F2A"
+    image: assets/branding/agan_launcher.png
+  android: true
+  ios: false
+  web: false

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../agent/agent_intents.dart';
 import '../agent/agent_service.dart';
+import '../services/ai_gateway.dart';
+import 'settings/ai_settings.dart';
 import '../core/theme.dart';
 import '../widgets/identity.dart';
 import '../widgets/kit.dart';
@@ -24,8 +26,9 @@ class _AgentMessage {
   final bool mine;
   AgentIntent? proposal;
   String? destination;
+  final String? origin;
   bool resolved = false;
-  _AgentMessage(this.text, {this.mine = false, this.proposal, this.destination});
+  _AgentMessage(this.text, {this.mine = false, this.proposal, this.destination, this.origin});
 }
 
 class _AganaAgentScreenState extends State<AganaAgentScreen> {
@@ -34,7 +37,7 @@ class _AganaAgentScreenState extends State<AganaAgentScreen> {
   bool busy = false;
   final messages = <_AgentMessage>[
     _AgentMessage('Halo! Saya AGANA. Saya bisa memeriksa data toko dan membantu membuat catatan. '
-      'Mulai dari tombol contoh atau ketik perintah. Saya akan meminta persetujuan sebelum menyimpan perubahan.'),
+      'Untuk pertanyaan umum, hubungkan AI melalui Pengaturan API. Perubahan data selalu membutuhkan persetujuan.'),
   ];
   static const suggestions = [
     'Pengingat jatuh tempo', 'Cek stok menipis', 'Laporan hari ini',
@@ -66,10 +69,30 @@ class _AganaAgentScreenState extends State<AganaAgentScreen> {
     setState(() { messages.add(_AgentMessage(text, mine: true)); busy = true; });
     scrollBottom();
     try {
-      final result = await AgentService.ask(text);
-      if (!mounted) return;
-      setState(() => messages.add(_AgentMessage(result.message,
-        proposal: result.proposal, destination: result.destination)));
+      // Known store intents ALWAYS run locally against SQLite.
+      // External AI only answers unsupported/general-language questions and
+      // never receives local customer, balance, product or payment records.
+      final intent = AgentParser.parse(text);
+      if (intent.kind == 'unknown') {
+        final config = await AiGateway.load();
+        if (config.enabled) {
+          try {
+            final answer = await AiGateway.ask(text);
+            if (mounted) setState(() => messages.add(_AgentMessage(answer, origin: 'AI • ${AiProviders.byId(config.provider).label}')));
+          } catch (e) {
+            final local = await AgentService.ask(text);
+            if (mounted) setState(() => messages.add(_AgentMessage(
+              'Layanan AI belum dapat dihubungi: $e\n\n${local.message}')));
+          }
+        } else {
+          final local = await AgentService.ask(text);
+          if (mounted) setState(() => messages.add(_AgentMessage(local.message)));
+        }
+      } else {
+        final result = await AgentService.ask(text);
+        if (mounted) setState(() => messages.add(_AgentMessage(result.message,
+          proposal: result.proposal, destination: result.destination)));
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => messages.add(_AgentMessage('Gagal membaca data toko. Periksa database atau coba lagi. ($e)')));
@@ -176,7 +199,7 @@ class _AganaAgentScreenState extends State<AganaAgentScreen> {
           const SizedBox(width: 10),
           const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('AGANA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: .5)),
-            Text('Asisten pintar toko • lokal', style: TextStyle(fontSize: 11)),
+            Text('Asisten pintar • SQLite + AI pilihan', style: TextStyle(fontSize: 11)),
           ])),
         ]),
         actions: [
@@ -273,7 +296,7 @@ class _AganaAgentScreenState extends State<AganaAgentScreen> {
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (!msg.mine) ...[
-              Text('AGANA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900,
+              Text(msg.origin ?? 'AGANA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900,
                 color: scheme.primary)), const SizedBox(height: 6),
             ],
             SelectableText(msg.text, style: TextStyle(height: 1.48, fontSize: 13,

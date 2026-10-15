@@ -13,6 +13,7 @@ import 'security/pin_screens.dart';
 import 'receivables.dart';
 import 'app_templates.dart';
 import 'agana_agent.dart';
+import 'settings/ai_settings.dart';
 
 class MoreScreen extends StatelessWidget {
   final ValueChanged<Widget> open;
@@ -30,6 +31,9 @@ class MoreScreen extends StatelessWidget {
       _MenuItem(icon: Icons.auto_awesome_rounded, color: const Color(0xFF7356E9),
         title: 'AGANA • Asisten Pintar', subtitle: 'Cek tagihan, stok, service dan bantu input data',
         onTap: () => open(const AganaAgentScreen())),
+      _MenuItem(icon: Icons.hub_rounded, color: const Color(0xFF1489CE),
+        title: 'Pengaturan API Key AGANA', subtitle: 'Pilih layanan AI, model, dan uji koneksi',
+        onTap: () => open(const AganaAiSettingsScreen())),
       _MenuItem(icon: Icons.people_alt_rounded, color: const Color(0xFF7D50D6),
         title: 'Pelanggan & Kontak', subtitle: 'Input manual atau pilih dari kontak HP', onTap: () => open(const CustomersScreen())),
       _MenuItem(icon: Icons.receipt_long_rounded, color: const Color(0xFFB75B3D),
@@ -565,11 +569,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text('AGAN PONSEL', style: TextStyle(fontWeight: FontWeight.w900,
               fontSize: 21, color: Colors.white)),
             SizedBox(height: 4),
-            Text('Flutter • v0.8.0 Build 12',
+            Text('Flutter • v0.9.0 Build 13',
               style: TextStyle(color: Colors.white70, fontSize: 12)),
           ])),
         ])),
       const SizedBox(height: 22),
+      const SectionTitle('AI & asisten toko'),
+      SettingsCard(icon: Icons.smart_toy_rounded, color: const Color(0xFF5866E6),
+        title: 'AGANA • Pengaturan API', subtitle: 'API key, model, layanan AI dan koneksi',
+        onTap: () => go(const AganaAiSettingsScreen())),
+      const SizedBox(height: 14),
       const SectionTitle('Keamanan aplikasi'),
       _MenuItem(icon: Icons.shield_rounded, color: const Color(0xFF13A283),
         title: 'PIN & Biometrik', subtitle: 'Aktifkan PIN dan autentikasi perangkat',

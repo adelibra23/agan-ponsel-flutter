@@ -15,6 +15,7 @@ needed = [
     '<uses-permission android:name="android.permission.CAMERA" />',
     '<uses-permission android:name="android.permission.READ_CONTACTS" />',
     '<uses-permission android:name="android.permission.USE_BIOMETRIC" />',
+    '<uses-permission android:name="android.permission.INTERNET" />',
 ]
 match = re.search(r'<manifest\b[^>]*>', content)
 if not match:

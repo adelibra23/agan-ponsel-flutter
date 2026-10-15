@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -155,66 +156,130 @@ class SplashGate extends StatefulWidget {
   State<SplashGate> createState() => _SplashGateState();
 }
 
-/// Intro AG Motion: halo berdenyut, logo orbit berputar, wordmark bertahap.
+/// AG Orbit Holographic: simulated 3D tilt + orbit parallax, fully Flutter.
+/// Native Android keeps a matching static icon until the Flutter view is ready.
 class _SplashGateState extends State<SplashGate> with TickerProviderStateMixin {
-  bool shown = true;
-  late final AnimationController entrance = AnimationController(
-    vsync: this, duration: const Duration(milliseconds: 1150))..forward();
-  late final AnimationController pulse = AnimationController(
-    vsync: this, duration: const Duration(milliseconds: 2100))..repeat(reverse: true);
+  bool showing = true;
+  late final AnimationController intro = AnimationController(
+    vsync: this, duration: const Duration(milliseconds: 1450))..forward();
+  late final AnimationController orbit = AnimationController(
+    vsync: this, duration: const Duration(milliseconds: 4200))..repeat();
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 2450), () {
-      if (mounted) setState(() => shown = false);
+    Future<void>.delayed(const Duration(milliseconds: 3050), () {
+      if (mounted) setState(() => showing = false);
     });
   }
   @override
-  void dispose() { entrance.dispose(); pulse.dispose(); super.dispose(); }
+  void dispose() { intro.dispose(); orbit.dispose(); super.dispose(); }
+
   @override
   Widget build(BuildContext context) {
-    if (!shown) return AppShell(dark: widget.dark, template: widget.template,
-      onThemeChanged: widget.onThemeChanged, onTemplateChanged: widget.onTemplateChanged);
-    final gradient = templateGradient(widget.template);
-    final curved = CurvedAnimation(parent: entrance, curve: Curves.easeOutCubic);
+    if (!showing) return AppShell(dark: widget.dark, template: widget.template,
+      onThemeChanged: widget.onThemeChanged,
+      onTemplateChanged: widget.onTemplateChanged);
+    final enter = CurvedAnimation(parent: intro, curve: Curves.easeOutCubic);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
-      child: Scaffold(body: Container(
-        width: double.infinity, height: double.infinity,
-        decoration: BoxDecoration(gradient: LinearGradient(
-          begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradient)),
-        child: Stack(alignment: Alignment.center, children: [
-          AnimatedBuilder(animation: pulse, builder: (context, child) =>
-            Container(width: 215 + pulse.value * 28, height: 215 + pulse.value * 28,
-              decoration: BoxDecoration(shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: .09 + .08 * pulse.value), width: 2),
-                boxShadow: [BoxShadow(color: Colors.white.withValues(alpha: .10 * pulse.value),
-                  blurRadius: 60 + pulse.value * 30, spreadRadius: 12)]))),
-          AnimatedBuilder(animation: pulse, builder: (context, child) =>
-            Container(width: 174 + pulse.value * 14, height: 174 + pulse.value * 14,
-              decoration: BoxDecoration(shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: .16), width: 1)))),
-          FadeTransition(opacity: curved,
-            child: ScaleTransition(scale: Tween<double>(begin: .58, end: 1).animate(
-              CurvedAnimation(parent: entrance, curve: Curves.elasticOut)),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const AnimatedBrandMark(size: 116),
-                const SizedBox(height: 35),
-                const Text('AGAN PONSEL', style: TextStyle(color: Colors.white,
-                  fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
-                const SizedBox(height: 9),
-                const Text('KASIR  •  SERVICE  •  INVENTARIS',
-                  style: TextStyle(color: Colors.white70, fontSize: 10,
-                    fontWeight: FontWeight.w700, letterSpacing: 1.5)),
-                const SizedBox(height: 28),
-                AnimatedBuilder(animation: entrance, builder: (context, child) =>
-                  ClipRRect(borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(width: 110, child: LinearProgressIndicator(
-                      value: entrance.value, minHeight: 3,
-                      backgroundColor: Colors.white24, color: Colors.white)))),
-              ]))),
-        ]),
-      )),
+      child: Scaffold(backgroundColor: const Color(0xFF030A20),
+        body: Stack(fit: StackFit.expand, children: [
+          const DecoratedBox(decoration: BoxDecoration(
+            gradient: RadialGradient(center: Alignment(-.15, -.28), radius: 1.2,
+              colors: [Color(0xFF143A9E), Color(0xFF081B57), Color(0xFF030A20)]))),
+          AnimatedBuilder(animation: orbit, builder: (context, _) => CustomPaint(
+            painter: _AganCosmosPainter(orbit.value))),
+          SafeArea(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            AnimatedBuilder(animation: Listenable.merge([intro, orbit]), builder: (context, _) {
+              final rise = Curves.easeOutBack.transform(intro.value.clamp(0.0, 1.0).toDouble());
+              return Opacity(opacity: intro.value.clamp(0.0, 1.0).toDouble(),
+                child: Transform.translate(offset: Offset(0, 30 * (1 - rise)),
+                  child: SizedBox(width: 274, height: 274,
+                    child: Stack(alignment: Alignment.center, children: [
+                      Container(width: 209, height: 209,
+                        decoration: BoxDecoration(shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: const Color(0xFF1ACBFF)
+                            .withValues(alpha: .28 + .10 * math.sin(orbit.value * 2 * math.pi).abs()),
+                            blurRadius: 48, spreadRadius: 17)])),
+                      Transform(transform: Matrix4.identity()
+                        ..setEntry(3, 2, .0010)
+                        ..rotateY(math.sin(orbit.value * 2 * math.pi) * .17)
+                        ..rotateX(math.cos(orbit.value * 2 * math.pi) * .09),
+                        alignment: Alignment.center,
+                        child: Image.asset('assets/branding/agan_launcher.png',
+                          width: 182 * rise, height: 182 * rise,
+                          fit: BoxFit.contain)),
+                      Transform.rotate(angle: orbit.value * math.pi * 2,
+                        child: CustomPaint(size: const Size(258, 258),
+                          painter: _HolographicRingPainter())),
+                    ]))),
+              );
+            }),
+            const SizedBox(height: 18),
+            FadeTransition(opacity: enter,
+              child: SlideTransition(position: Tween<Offset>(
+                begin: const Offset(0, .35), end: Offset.zero).animate(enter),
+                child: const Column(children: [
+                  Text('AGAN PONSEL', textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 29, letterSpacing: 2.1,
+                      color: Colors.white, fontWeight: FontWeight.w900)),
+                  SizedBox(height: 8),
+                  Text('KASIR  •  SERVICE  •  MANAJEMEN TOKO',
+                    style: TextStyle(fontSize: 10, letterSpacing: 1.5,
+                      color: Color(0xFFB8D9FF), fontWeight: FontWeight.w700)),
+                ]))),
+            const SizedBox(height: 35),
+            SizedBox(width: 108, child: AnimatedBuilder(animation: intro,
+              builder: (context, _) => ClipRRect(borderRadius: BorderRadius.circular(30),
+                child: LinearProgressIndicator(value: intro.value,
+                  minHeight: 3, backgroundColor: const Color(0xFF294576),
+                  color: const Color(0xFF50E9FF))))),
+          ]))),
+        ])),
     );
   }
+}
+
+class _HolographicRingPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.scale(1, .39);
+    final oval = Rect.fromCenter(center: Offset.zero,
+      width: size.width * .99, height: size.height * 1.2);
+    final p = Paint()
+      ..style = PaintingStyle.stroke ..strokeWidth = 4.2
+      ..strokeCap = StrokeCap.round
+      ..shader = const SweepGradient(colors: [Colors.transparent,
+        Color(0xFF05D3FF), Color(0xFFF1F8FF), Color(0xFF8B64FF),
+        Colors.transparent]).createShader(oval);
+    canvas.drawArc(oval, -.3, math.pi * 1.85, false, p);
+    canvas.restore();
+  }
+  @override
+  bool shouldRepaint(covariant _HolographicRingPainter old) => false;
+}
+
+class _AganCosmosPainter extends CustomPainter {
+  final double frame;
+  const _AganCosmosPainter(this.frame);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final star = Paint();
+    for (var i = 0; i < 45; i++) {
+      final x = (i * 73.47 + 21) % 101 / 101 * size.width;
+      final y = (i * 53.17 + 37) % 97 / 97 * size.height;
+      final alpha = (.14 + .28 * (1 + math.sin(i * .6 + frame * 2 * math.pi)) / 2);
+      star.color = const Color(0xFF83E9FF).withValues(alpha: alpha);
+      canvas.drawCircle(Offset(x, y), (i % 4 == 0 ? 1.9 : 1), star);
+    }
+    final middle = Offset(size.width / 2, size.height * .43);
+    final glow = Paint()..color = const Color(0xFF038CFF).withValues(alpha: .07)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 85);
+    canvas.drawCircle(middle, 150, glow);
+  }
+  @override
+  bool shouldRepaint(covariant _AganCosmosPainter old) => old.frame != frame;
 }

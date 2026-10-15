@@ -28,7 +28,7 @@ class AgentService {
       '• catat piutang Budi; 150000; 2026-11-01; pulsa\n\n'
       'Setiap pencatatan harus kamu konfirmasi. Untuk transaksi kompleks, '
       'saya akan membuka halaman yang sesuai. Saya tidak terhubung ke rekening, '
-      'tagihan provider, atau layanan AI internet.';
+      'tagihan provider. Jika API AI diaktifkan, AGANA bisa menjawab pertanyaan umum lewat penyedia pilihanmu.';
 
   static Future<AgentResult> ask(String text) async {
     final intent = AgentParser.parse(text);

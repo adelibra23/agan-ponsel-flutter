@@ -39,6 +39,12 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      - name: Generate branded Android launcher icon
+        run: dart run flutter_launcher_icons
+
+      - name: Generate branded native splash
+        run: dart run flutter_native_splash:create
+
       - name: Check Dart code formatting
         run: dart format lib test
 
@@ -52,7 +58,7 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run basic unit tests
-        run: flutter test test/format_test.dart test/feature_test.dart test/theme_contrast_test.dart test/receivables_test.dart test/agana_intents_test.dart
+        run: flutter test test/format_test.dart test/feature_test.dart test/theme_contrast_test.dart test/receivables_test.dart test/agana_intents_test.dart test/ai_providers_test.dart
 
       - name: Build release APK
         run: flutter build apk --release
@@ -60,7 +66,7 @@ jobs:
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-v0.8.0-Build12-APK
+          name: AGAN-PONSEL-v0.9.0-Build13-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14

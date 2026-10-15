@@ -34,8 +34,10 @@ class _AnimatedBrandMarkState extends State<AnimatedBrandMark> with SingleTicker
           boxShadow: [BoxShadow(color: brandCyan.withOpacity(.3), blurRadius: 13, spreadRadius: 0)],
         ),
         alignment: Alignment.center,
-        child: Text('AG', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -2,
-          fontSize: widget.size * .32, color: brandBlue)),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(widget.size * .27),
+          child: Image.asset('assets/branding/agan_launcher.png',
+            width: widget.size * .80, height: widget.size * .80, fit: BoxFit.cover)),
       ),
       Transform.rotate(
         angle: spin.value * math.pi * 2,
