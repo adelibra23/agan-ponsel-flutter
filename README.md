@@ -1,8 +1,17 @@
-# AGAN PONSEL Flutter Offline v0.6.0 • Build 9
+# AGAN PONSEL Flutter Offline v0.6.1 • Build 10
 
 Aplikasi **Android Flutter + SQLite**, offline tanpa server komputer. Paket ini merupakan source code lanjutan v0.5.1 Build 8; bukan APK yang sudah diuji di HP.
 
-## Fitur baru Build 9
+## Baru di Build 10 — Kontras tema & Beranda modern
+
+- Judul kategori **Keamanan aplikasi**, **Akun & identitas toko**, **Penyimpanan & perangkat**, **Tampilan & informasi**, dan **Tentang versi ini** kini menggunakan warna `onSurface` yang menyesuaikan mode terang/gelap.
+- Warna teks, label, subtitle, menu, tombol, AppBar, field, dan indikator navigasi menggunakan token warna tema yang kontras. Teks putih dipertahankan hanya pada elemen dengan latar gradasi biru.
+- Komponen `SectionTitle` kini mempunyai garis aksen biru, skala 16.5 sp, dan subtitle yang mudah dibaca.
+- Beranda: kartu sapaan adaptif, kartu statistik dua kolom dengan ikon terpisah, nilai angka lebih menonjol, kartu saldo yang diperhalus, animasi progress target omzet, dan tepi kartu yang lebih rapi.
+- **Tidak ada perubahan skema SQLite** (tetap v6), tabel maupun data transaksi. Fitur kontak, PIN/biometrik, foto produk, barcode, printer, dan backup tetap dipertahankan.
+- Menambahkan tes regresi kontras teks pada tema terang dan gelap di GitHub Actions.
+
+## Fitur dari Build 9
 
 - **Kontak pelanggan**: tekan ikon kontak pada menu Pelanggan, izinkan `READ_CONTACTS`, cari dan pilih satu kontak/nomor untuk menambah pelanggan. Tidak ada impor massal atau sinkronisasi otomatis. Tetap bisa input manual bila izin ditolak.
 - **Logo toko**: Pengaturan → **Logo & Branding**, pilih gambar JPG/PNG/WebP dari galeri (maksimum 2 MB). Logo ditampilkan di header, profil, dan halaman tentang aplikasi; file disimpan privat di Android.

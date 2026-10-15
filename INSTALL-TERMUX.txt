@@ -1,26 +1,26 @@
-AGAN PONSEL Flutter v0.6.0 Build 9
+AGAN PONSEL Flutter v0.6.1 Build 10
 ================================
 
-1. Simpan AGAN-PONSEL-Flutter-v0.6.0-Build9.zip di folder Download Android.
+1. Simpan AGAN-PONSEL-Flutter-v0.6.1-Build10.zip di folder Download Android.
 
 2. Masuk ke Termux. Perintah dijalankan satu per satu:
 
 cd ~/agan-build/agan_ponsel_flutter
 
-unzip -o "/sdcard/Download/AGAN-PONSEL-Flutter-v0.6.0-Build9.zip"
+unzip -o "/sdcard/Download/AGAN-PONSEL-Flutter-v0.6.1-Build10.zip"
 
 git status --short
 
 git add lib pubspec.yaml scripts test .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt
 
-git commit -m "AGAN PONSEL Flutter v0.6.0 Build9"
+git commit -m "AGAN PONSEL Flutter v0.6.1 Build10"
 
 git push origin main
 
 3. GitHub Actions:
 https://github.com/adelibra23/agan-ponsel-flutter/actions
 
-4. Bila build sukses, unduh artifact AGAN-PONSEL-v0.6.0-Build9-APK.
+4. Bila build sukses, unduh artifact AGAN-PONSEL-v0.6.1-Build10-APK.
 
 Jika Termux belum diberi izin akses penyimpanan, jalankan termux-setup-storage.
 Jika git push gagal dengan Could not resolve host, periksa koneksi dan ulangi git push; tidak perlu git commit ulang.

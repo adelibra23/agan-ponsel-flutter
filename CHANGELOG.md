@@ -1,5 +1,15 @@
 # AGAN PONSEL Flutter — Changelog
 
+## v0.6.1 Build 10 — Contrast & Dashboard Polish
+
+- Perbaikan warna semua judul dan label menu agar sesuai light/dark theme, khususnya kategori Pengaturan dan Tentang Aplikasi.
+- TextTheme/ColorScheme berbasis warna onSurface dan onSurfaceVariant dengan kontras lebih tinggi.
+- Menu item, kartu pengaturan, dan nama ikon di Beranda mengikuti token warna tema.
+- Kartu statistik, kartu sapaan, saldo, dan target omzet Beranda diperbarui dengan border lembut, tipografi modern, serta animasi yang lebih halus.
+- Unit test rasio kontras untuk teks utama dan sekunder.
+- Tidak ada migrasi database: SQLite schema tetap versi 6, data lokal tetap digunakan.
+
+
 ## v0.6.0 Build 9 — Offline Plus
 
 - Kontak pelanggan dari buku telepon Android (izin baca saja, dipilih satu per satu)

@@ -39,40 +39,67 @@ class _BalanceCardState extends State<BalanceCard> {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(25),
-      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFF0C1C52), Color(0xFF0754DC), Color(0xFF168DF0)]),
-      boxShadow: [BoxShadow(color: brandBlue.withValues(alpha: .17), blurRadius: 15, offset: const Offset(0, 6))]),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 19),
-        const SizedBox(width: 8),
-        const Expanded(child: Text('SALDO KAS TERCATAT',
-          style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: .8))),
-        IconButton(tooltip: visible ? 'Sembunyikan saldo' : 'Tampilkan saldo',
-          onPressed: toggle, icon: Icon(visible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-            color: Colors.white, size: 22)),
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(25),
+    child: Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFF0C1C52), Color(0xFF0754DC), Color(0xFF168DF0)])),
+      child: Stack(children: [
+        Positioned(top: -68, right: -36,
+          child: IgnorePointer(child: Container(width: 172, height: 172,
+            decoration: BoxDecoration(shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: .09), width: 30))))),
+        Positioned(bottom: -63, right: 54,
+          child: IgnorePointer(child: Container(width: 112, height: 112,
+            decoration: BoxDecoration(shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: .045))))),
+        Padding(padding: const EdgeInsets.fromLTRB(19, 16, 17, 14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(width: 36, height: 36,
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: .15),
+                  borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.account_balance_wallet_rounded,
+                  color: Colors.white, size: 20)),
+              const SizedBox(width: 10),
+              const Expanded(child: Text('SALDO KAS TERCATAT',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800,
+                  fontSize: 11, letterSpacing: .6))),
+              IconButton(tooltip: visible ? 'Sembunyikan saldo' : 'Tampilkan saldo',
+                onPressed: toggle,
+                style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: .12)),
+                icon: Icon(visible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                  color: Colors.white, size: 21)),
+            ]),
+            const SizedBox(height: 11),
+            FutureBuilder<int>(future: total, builder: (context, snap) =>
+              AnimatedSwitcher(duration: const Duration(milliseconds: 260),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation, child: child),
+                child: Text(visible
+                    ? (snap.hasError ? 'Saldo tidak tersedia'
+                        : snap.hasData ? rupiah(snap.data!) : 'Menghitung...')
+                    : 'Rp ••••••••',
+                  key: ValueKey('${visible}-${snap.data}'),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white,
+                    fontSize: 27, letterSpacing: -.8, fontWeight: FontWeight.w900)))),
+            const SizedBox(height: 9),
+            Row(children: [
+              const Expanded(child: Text('Buku kas offline • hanya data tercatat',
+                style: TextStyle(color: Color(0xFFDAECFF), fontSize: 10.5))),
+              TextButton.icon(onPressed: widget.onOpen,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 8)),
+                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                label: const Text('Lihat detail', style: TextStyle(fontSize: 11.5,
+                  fontWeight: FontWeight.w800))),
+            ]),
+          ])),
       ]),
-      FutureBuilder<int>(future: total, builder: (context, snap) =>
-        AnimatedSwitcher(duration: const Duration(milliseconds: 240),
-          child: Text(visible ? (snap.hasData ? rupiah(snap.data!) : 'Menghitung...') : 'Rp ••••••••',
-            key: ValueKey('${visible}-${snap.data}'),
-            style: const TextStyle(color: Colors.white, fontSize: 28,
-              letterSpacing: -.8, fontWeight: FontWeight.w900)))),
-      const SizedBox(height: 12),
-      Row(children: [
-        const Expanded(child: Text('Tunai + penyesuaian − pengeluaran',
-          style: TextStyle(color: Colors.white70, fontSize: 10))),
-        TextButton.icon(onPressed: widget.onOpen,
-          style: TextButton.styleFrom(foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 8)),
-          icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-          label: const Text('Detail', style: TextStyle(fontSize: 12))),
-      ]),
-    ]),
+    ),
   );
 }
 

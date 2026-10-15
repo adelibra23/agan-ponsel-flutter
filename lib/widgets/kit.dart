@@ -8,19 +8,28 @@ class SectionTitle extends StatelessWidget {
   const SectionTitle(this.text, {super.key, this.subtitle, this.trailing});
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(text, style: Theme.of(context).textTheme.titleLarge),
-            if (subtitle != null) ...[
-              const SizedBox(height: 3),
-              Text(subtitle!, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
-            ],
-          ])),
-          if (trailing != null) trailing!,
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12, top: 1),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Container(width: 4, height: subtitle == null ? 19 : 31,
+          decoration: BoxDecoration(color: colors.primary,
+            borderRadius: BorderRadius.circular(5))),
+        const SizedBox(width: 11),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(text, style: TextStyle(color: colors.onSurface,
+            fontSize: 16.5, fontWeight: FontWeight.w900, letterSpacing: -.25)),
+          if (subtitle != null) ...[
+            const SizedBox(height: 3),
+            Text(subtitle!, style: TextStyle(color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w500, fontSize: 12.2)),
+          ],
+        ])),
+        if (trailing != null) trailing!,
+      ]),
+    );
+  }
 }
 
 class Surface extends StatelessWidget {
@@ -34,7 +43,8 @@ class Surface extends StatelessWidget {
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(22),
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(.025), blurRadius: 16, offset: const Offset(0, 5))],
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: .55)),
+      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .022), blurRadius: 16, offset: const Offset(0, 5))],
     ),
     child: child,
   );
@@ -110,31 +120,59 @@ class QuickIcon extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(label, textAlign: TextAlign.center, maxLines: 2,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 11, fontWeight: FontWeight.w700)),
       ]),
     ),
   );
 }
 
+/// Dashboard metric card. Values always use the theme's onSurface color
+/// rather than the accent shade, so they stay readable in either mode.
 class StatTile extends StatelessWidget {
   final String title;
   final String value;
   final Color color;
   final IconData icon;
-  const StatTile({super.key, required this.title, required this.value, required this.color, required this.icon});
+  const StatTile({super.key, required this.title, required this.value,
+    required this.color, required this.icon});
+
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(color: color.withOpacity(Theme.of(context).brightness == Brightness.dark ? .2 : .10),
-      borderRadius: BorderRadius.circular(20)),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Icon(icon, color: color, size: 25),
-      Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w900, fontSize: 17)),
-      Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600, fontSize: 11)),
-    ]),
-  );
+  Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final tintedSurface = Color.alphaBlend(
+      color.withValues(alpha: dark ? .15 : .075), palette.surface);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
+      decoration: BoxDecoration(
+        color: tintedSurface,
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: palette.outlineVariant.withValues(alpha: dark ? .7 : .65)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Row(children: [
+          Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: palette.onSurfaceVariant, fontSize: 11.7,
+              fontWeight: FontWeight.w700, height: 1.2))),
+          const SizedBox(width: 5),
+          Container(width: 34, height: 34,
+            decoration: BoxDecoration(
+              color: Color.alphaBlend(color.withValues(alpha: dark ? .20 : .13), palette.surface),
+              borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: dark ? palette.onSurface : color, size: 19)),
+        ]),
+        SizedBox(width: double.infinity, child: FittedBox(
+          alignment: Alignment.centerLeft, fit: BoxFit.scaleDown,
+          child: Text(value, maxLines: 1,
+            style: TextStyle(color: palette.onSurface, fontSize: 21,
+              fontWeight: FontWeight.w900, letterSpacing: -.65)))),
+      ]),
+    );
+  }
 }
 
 class ScreenLoading extends StatelessWidget {

@@ -45,7 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         GridView.count(
           shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10,
-          childAspectRatio: 1.48,
+          childAspectRatio: 1.44,
           children: [
             StatTile(title: 'Penjualan', value: rupiah(data['revenue']!), color: const Color(0xFF00A968), icon: Icons.shopping_bag_outlined),
             StatTile(title: 'Laba kotor', value: rupiah(data['profit']!), color: brandBlue, icon: Icons.auto_graph_rounded),
@@ -98,24 +98,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
 class _Welcome extends StatelessWidget {
   final VoidCallback onTap;
   const _Welcome({required this.onTap});
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final greeting = now.hour < 11 ? 'Selamat pagi' : now.hour < 15 ? 'Selamat siang' : now.hour < 18 ? 'Selamat sore' : 'Selamat malam';
-    return Surface(child: Row(children: [
-      Container(width: 52, height: 52,
-        decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFD5E9FF), Color(0xFFF0F6FF)]),
-          borderRadius: BorderRadius.circular(18)),
-        child: const Icon(Icons.storefront_rounded, size: 28, color: brandBlue)),
-      const SizedBox(width: 14),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('$greeting!', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-        const SizedBox(height: 3),
-        Text('Semangat mengelola AGAN PONSEL', style: TextStyle(
-          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-      ])),
-      IconButton(tooltip: 'Segarkan', onPressed: onTap, icon: const Icon(Icons.refresh_rounded)),
-    ]));
+    final greeting = now.hour < 11 ? 'Selamat pagi' : now.hour < 15
+        ? 'Selamat siang' : now.hour < 18 ? 'Selamat sore' : 'Selamat malam';
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final palette = Theme.of(context).colorScheme;
+    final textColor = palette.onSurface;
+    final date = '${now.day.toString().padLeft(2, '0')}/'
+        '${now.month.toString().padLeft(2, '0')}/${now.year}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: dark
+            ? const [Color(0xFF1B3351), Color(0xFF1A2639)]
+            : const [Color(0xFFE6F2FF), Color(0xFFFFFFFF)]),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: palette.outlineVariant.withValues(alpha: .65)),
+      ),
+      child: Row(children: [
+        Container(width: 53, height: 53,
+          decoration: BoxDecoration(
+            color: dark ? const Color(0xFF2B4872) : const Color(0xFFD5E8FF),
+            borderRadius: BorderRadius.circular(17)),
+          child: Icon(Icons.storefront_rounded, size: 28,
+            color: dark ? const Color(0xFFBBD6FF) : brandBlue)),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('$greeting!', maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: textColor, fontWeight: FontWeight.w900,
+              fontSize: 17.5, letterSpacing: -.2)),
+          const SizedBox(height: 3),
+          Text('AGAN PONSEL • $date', maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11.4, fontWeight: FontWeight.w600,
+              color: palette.onSurfaceVariant)),
+          const SizedBox(height: 5),
+          Text('Semua aktivitas toko dalam satu tempat',
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11.5, color: palette.onSurfaceVariant)),
+        ])),
+        IconButton(tooltip: 'Segarkan ringkasan', onPressed: onTap,
+          style: IconButton.styleFrom(backgroundColor:
+            palette.primary.withValues(alpha: .10)),
+          icon: Icon(Icons.refresh_rounded, color: palette.primary, size: 21)),
+      ]),
+    );
   }
 }
 
@@ -144,23 +174,43 @@ class _DailyGoal extends StatelessWidget {
       if (!snap.hasData) return const SizedBox.shrink();
       final target = int.tryParse(snap.data!.getString('daily_sales_target') ?? '1000000') ?? 1000000;
       if (target <= 0) return const SizedBox.shrink();
-      final double progress = (revenue / target).clamp(0.0, 1.0).toDouble();
+      final palette = Theme.of(context).colorScheme;
+      final progress = (revenue / target).clamp(0.0, 1.0).toDouble();
+      final percent = (revenue / target * 100).round();
       return Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Icon(Icons.flag_rounded, size: 18, color: brandBlue),
-          const SizedBox(width: 8),
-          const Expanded(child: Text('Target omzet hari ini',
-            style: TextStyle(fontWeight: FontWeight.w800))),
-          Text('${(revenue / target * 100).round()}%',
-            style: const TextStyle(fontWeight: FontWeight.w900, color: brandBlue)),
+          Container(width: 36, height: 36,
+            decoration: BoxDecoration(color: palette.primary.withValues(alpha: .10),
+              borderRadius: BorderRadius.circular(12)),
+            child: Icon(Icons.flag_rounded, color: palette.primary, size: 20)),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Target omzet hari ini', style: TextStyle(
+              color: palette.onSurface, fontSize: 13, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 3),
+            Text(percent >= 100 ? 'Target tercapai!' : 'Menuju target harian',
+              style: TextStyle(fontSize: 11, color: palette.onSurfaceVariant)),
+          ])),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: palette.primary.withValues(alpha: .10),
+              borderRadius: BorderRadius.circular(10)),
+            child: Text('$percent%', style: TextStyle(color: palette.primary,
+              fontSize: 12, fontWeight: FontWeight.w900))),
         ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: 15),
         ClipRRect(borderRadius: BorderRadius.circular(9),
-          child: LinearProgressIndicator(value: progress, minHeight: 9,
-            backgroundColor: brandBlue.withValues(alpha: .10))),
-        const SizedBox(height: 7),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: progress),
+            duration: const Duration(milliseconds: 650),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) => LinearProgressIndicator(
+              value: value, minHeight: 9,
+              backgroundColor: palette.primary.withValues(alpha: .10),
+              color: palette.primary))),
+        const SizedBox(height: 10),
         Text('${rupiah(revenue)} dari ${rupiah(target)}',
-          style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600,
+            color: palette.onSurfaceVariant)),
       ]));
     });
 }

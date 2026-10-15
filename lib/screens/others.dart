@@ -85,9 +85,12 @@ class _MenuItem extends StatelessWidget {
       leading: Container(width: 45, height: 45, decoration: BoxDecoration(
         color: color.withOpacity(.11), borderRadius: BorderRadius.circular(14)),
         child: Icon(icon, color: color)),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
-      trailing: const Icon(Icons.chevron_right_rounded),
+      title: Text(title, style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w800)),
+      subtitle: Text(subtitle, style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11.5)),
+      trailing: Icon(Icons.chevron_right_rounded,
+        color: Theme.of(context).colorScheme.onSurfaceVariant),
     )),
   );
 }
@@ -543,7 +546,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text('AGAN PONSEL', style: TextStyle(fontWeight: FontWeight.w900,
               fontSize: 21, color: Colors.white)),
             SizedBox(height: 4),
-            Text('Flutter Offline • v0.6.0 Build 9',
+            Text('Flutter Offline • v0.6.1 Build 10',
               style: TextStyle(color: Colors.white70, fontSize: 12)),
           ])),
         ])),
@@ -578,8 +581,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       const SectionTitle('Tampilan & informasi'),
       Surface(child: SwitchListTile(contentPadding: EdgeInsets.zero,
         secondary: Icon(currentDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, color: brandBlue),
-        title: const Text('Mode Gelap', style: TextStyle(fontWeight: FontWeight.w800)),
-        subtitle: const Text('Tema mengikuti pilihan yang tersimpan'),
+        title: Text('Mode Gelap', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w800)),
+        subtitle: Text('Tema mengikuti pilihan yang tersimpan', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         value: currentDark, onChanged: changeTheme)),
       const SizedBox(height: 10),
       SettingsCard(icon: Icons.info_outline_rounded, color: const Color(0xFF63748D),
