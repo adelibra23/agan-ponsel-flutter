@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' as p;
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const AganApp()); }
 
@@ -8,7 +8,7 @@ class Store {
   static Database? _db;
   static Future<Database> get db async {
     if (_db != null) return _db!;
-    final location = join(await getDatabasesPath(), 'agan_ponsel_v1.db');
+    final location = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     _db = await openDatabase(location, version: 2, onUpgrade: (d, oldVersion, newVersion) async {
       if (oldVersion < 2) {
         await d.execute('CREATE TABLE IF NOT EXISTS customers(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT NOT NULL, note TEXT NOT NULL)');
