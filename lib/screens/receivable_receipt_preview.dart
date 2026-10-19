@@ -13,6 +13,7 @@ import 'package:share_plus/share_plus.dart';
 import '../core/format.dart';
 import '../services/printer_service.dart';
 import '../services/receivable_receipt_service.dart';
+import '../services/receivables_service.dart';
 import '../services/store_brand.dart';
 import '../widgets/kit.dart';
 
