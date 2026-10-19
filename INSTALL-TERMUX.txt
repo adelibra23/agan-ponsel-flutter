@@ -1,14 +1,9 @@
-AGAN PONSEL Flutter v1.0.0 Build 17
-=================================
-Simpan ZIP di folder Download HP kemudian jalankan:
+AGAN PONSEL v1.0.2 Build19 STARTUP HOTFIX
 
 cd ~/agan-build/agan_ponsel_flutter
-unzip -o "/sdcard/Download/AGAN-PONSEL-Flutter-v1.0.0-Build17.zip"
-git add lib pubspec.yaml scripts test .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt
-git commit -m "AGAN PONSEL Flutter v1.0.0 Build17 Nota Piutang"
+unzip -o /sdcard/Download/AGAN-PONSEL-Flutter-v1.0.2-Build19-Startup-Hotfix.zip
+git add lib pubspec.yaml scripts .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt assets test
+git commit -m "AGAN PONSEL v1.0.2 Build19 Startup Hotfix"
 git push origin main
 
-Periksa hasil di https://github.com/adelibra23/agan-ponsel-flutter/actions
-Jika build sukses, unduh artifact AGAN-PONSEL-v1.0.0-Build17-APK.
-
-PENTING: buat backup sebelum memasang APK baru; jangan uninstall aplikasi lama.
+BUKAN APK; build dan uji dengan GitHub Actions. Jangan uninstall atau hapus data aplikasi lama.

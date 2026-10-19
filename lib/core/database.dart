@@ -73,7 +73,18 @@ class SaleResult {
 class AppDatabase {
   AppDatabase._();
   static Future<Database>? _opening;
-  static Future<Database> get instance => _opening ??= _open();
+
+  // A failed database open must not poison all subsequent retries.
+  static Future<Database> get instance => _opening ??= _openRecoverable();
+
+  static Future<Database> _openRecoverable() async {
+    try {
+      return await _open();
+    } catch (_) {
+      _opening = null;
+      rethrow;
+    }
+  }
 
   static Future<Database> _open() async {
     // Same database filename as Flutter v0.2. Existing local data is migrated.
@@ -83,6 +94,20 @@ class AppDatabase {
       version: 10,
       onCreate: (db, version) async {
         await _createBase(db);
+        await _createNew(db);
+        await _createServiceExtras(db);
+        await _createPhotoExtras(db);
+        await _createStoreExtras(db);
+        await _createReceivables(db);
+        await _createAgentAudit(db);
+        await _createReceivableLines(db);
+        await _createReceiptEvents(db);
+      },
+      // Repair missing additive tables/columns even if SQLite already reports
+      // the current user_version (e.g. an older partial upgrade).
+      onOpen: (db) async {
+        await _addProductFields(db);
+        await _createExtra(db);
         await _createNew(db);
         await _createServiceExtras(db);
         await _createPhotoExtras(db);

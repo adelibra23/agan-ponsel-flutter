@@ -1,3 +1,41 @@
+# AGAN PONSEL v1.0.2 Build 19 — Hotfix Aplikasi Tidak Bisa Dibuka
+
+Paket source ini melanjutkan v1.0.1 Build 18 dan mempertahankan modul kasir, service, piutang, printer thermal, nota gambar, dan AGANA.
+
+## Memasang melalui Termux (source proyek yang sudah ada)
+
+1. Unduh `AGAN-PONSEL-Flutter-v1.0.2-Build19-Startup-Hotfix.zip` ke folder Download Android.
+2. Jalankan:
+
+```bash
+cd ~/agan-build/agan_ponsel_flutter
+unzip -o /sdcard/Download/AGAN-PONSEL-Flutter-v1.0.2-Build19-Startup-Hotfix.zip
+python3 scripts/check_startup_safety.py  # opsional, hanya jika Python tersedia
+
+git add lib pubspec.yaml scripts .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt assets test
+git commit -m "AGAN PONSEL v1.0.2 Build19 Startup Hotfix"
+git push origin main
+```
+
+3. Buka Actions pada repo GitHub untuk memeriksa build dan unduh artifact.
+
+## Jika masih tidak terbuka
+
+- Jangan uninstall, clear storage, atau hapus data. Database lokal tidak otomatis aman jika dihapus.
+- Jika muncul layar **Pemulihan AGAN PONSEL**, tekan **Salin Error** lalu kirim pesan error tersebut.
+- Jika hanya splash lalu menutup sendiri, atau Android menampilkan **Aplikasi terus berhenti**, perlu **logcat Android**; error native tidak terlihat dari hasil `flutter analyze`.
+- Instal APK baru hanya jika signature aplikasi cocok; jangan uninstall aplikasi lama yang berisi data penting.
+
+## Keamanan
+
+PIN tidak dihapus dan tidak dilewati apabila pengecekan pengaturan keamanan gagal. Proses pemulihan SQLite hanya membuat tabel/kolom yang hilang (IF NOT EXISTS / pemeriksaan PRAGMA), tidak menghapus piutang atau service.
+
+## Status
+
+Validasi dasar source dan tes SQLite dapat dilakukan di lingkungan penyiapan. Kompilasi APK dan masalah perangkat fisik belum dapat dipastikan sebelum GitHub Actions dan pengujian HP.
+
+---
+
 # AGAN PONSEL Flutter v1.0.0 Build 17 — Nota Piutang Digital & Thermal
 
 Lanjutan dari **v0.9.3 Build 16**, tetap memakai Dart/Flutter dan SQLite Android. Tidak membutuhkan server untuk mencatat data toko, membuat PNG atau mencetak via printer thermal yang telah dipasangkan.

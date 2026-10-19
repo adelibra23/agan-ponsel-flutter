@@ -19,9 +19,30 @@ import 'screens/agana_agent.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  runApp(AganApp(initialDark: prefs.getBool('dark_mode') ?? false,
-    initialTemplate: prefs.getString('app_template_style') ?? 'Biru Orbit')); 
+  // Do not leave the screen permanently blank if preferences fail to load.
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    runApp(AganApp(initialDark: prefs.getBool('dark_mode') ?? false,
+      initialTemplate: prefs.getString('app_template_style') ?? 'Biru Orbit'));
+  } catch (error) {
+    runApp(MaterialApp(debugShowCheckedModeBanner: false,
+      home: Scaffold(body: SafeArea(child: Center(child: Padding(
+        padding: const EdgeInsets.all(24), child: Column(
+        mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.error_outline_rounded, size: 50),
+          const SizedBox(height: 15),
+          const Text('AGAN PONSEL belum bisa dibuka',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          const Text('Pengaturan keamanan Android tidak dapat dibaca. '
+            'Jangan hapus data aplikasi. Tutup dan buka kembali, '
+            'lalu kirim laporan error jika masih gagal.',
+            textAlign: TextAlign.center),
+          const SizedBox(height: 14),
+          SelectableText('$error', textAlign: TextAlign.center),
+        ],
+      )))))));
+  }
 }
 
 class AganApp extends StatefulWidget {
@@ -53,8 +74,90 @@ class _AganAppState extends State<AganApp> {
     darkTheme: aganTheme(Brightness.dark, template: template),
     themeMode: dark ? ThemeMode.dark : ThemeMode.light,
     builder: (context, navigator) => PinGate(child: navigator ?? const SizedBox.shrink()),
-    home: SplashGate(dark: dark, template: template,
+    home: AganStartupGate(dark: dark, template: template,
       onThemeChanged: changeTheme, onTemplateChanged: changeTemplate),
+  );
+}
+
+/// Startup guard: check and repair the additive database schema before the
+/// main dashboard starts querying it. Never deletes user records or resets PIN.
+class AganStartupGate extends StatefulWidget {
+  final bool dark;
+  final String template;
+  final ValueChanged<bool> onThemeChanged;
+  final ValueChanged<String> onTemplateChanged;
+  const AganStartupGate({super.key, required this.dark, required this.template,
+    required this.onThemeChanged, required this.onTemplateChanged});
+
+  @override
+  State<AganStartupGate> createState() => _AganStartupGateState();
+}
+
+class _AganStartupGateState extends State<AganStartupGate> {
+  late Future<void> preparation;
+
+  @override
+  void initState() {
+    super.initState();
+    preparation = prepare();
+  }
+
+  Future<void> prepare() async {
+    await AppDatabase.instance;
+  }
+
+  void retry() => setState(() => preparation = prepare());
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<void>(
+    future: preparation,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const Scaffold(body: Center(child: Column(
+          mainAxisSize: MainAxisSize.min, children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 18),
+            Text('Menyiapkan AGAN PONSEL...'),
+          ],
+        )));
+      }
+      if (snapshot.hasError) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Pemulihan AGAN PONSEL')),
+          body: SafeArea(child: Center(child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24), child: Column(
+            mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.storage_rounded, size: 48),
+              const SizedBox(height: 16),
+              Text('Data toko belum bisa dimuat',
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center),
+              const SizedBox(height: 10),
+              const Text('Aplikasi tidak menghapus database maupun piutang. '
+                'Coba lagi, dan jangan uninstall atau hapus data sebelum membuat cadangan.',
+                textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              FilledButton.icon(onPressed: retry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Coba Lagi')),
+              const SizedBox(height: 18),
+              const Text('Rincian teknis (untuk laporan error):'),
+              const SizedBox(height: 7),
+              SelectableText('${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12)),
+              TextButton.icon(onPressed: () => Clipboard.setData(
+                  ClipboardData(text: 'AGAN PONSEL database startup: ${snapshot.error}')),
+                icon: const Icon(Icons.copy_rounded),
+                label: const Text('Salin Error')),
+            ],
+          )))),
+        );
+      }
+      return SplashGate(dark: widget.dark, template: widget.template,
+        onThemeChanged: widget.onThemeChanged,
+        onTemplateChanged: widget.onTemplateChanged);
+    },
   );
 }
 
@@ -202,7 +305,10 @@ class _SplashGateState extends State<SplashGate> with TickerProviderStateMixin {
                         alignment: Alignment.center,
                         child: Image.asset('assets/branding/agan_launcher.png',
                           width: 182 * rise, height: 182 * rise,
-                          fit: BoxFit.contain)),
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stack) =>
+                            const Icon(Icons.storefront_rounded,
+                              color: Colors.white, size: 90))),
                       Transform.rotate(angle: orbit.value * math.pi * 2,
                         child: CustomPaint(size: const Size(258, 258),
                           painter: _HolographicRingPainter())),

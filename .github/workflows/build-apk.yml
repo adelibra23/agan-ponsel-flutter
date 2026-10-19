@@ -45,6 +45,14 @@ jobs:
       - name: Generate branded native splash
         run: dart run flutter_native_splash:create
 
+      # Native splash generation can rewrite Android themes. Reapply safe
+      # AppCompat/FragmentActivity configuration for the PIN biometric screen.
+      - name: Finalize Android startup theme
+        run: python3 scripts/prepare_android.py
+
+      - name: Check startup guard files
+        run: python3 scripts/check_startup_safety.py
+
       - name: Check Dart code formatting
         run: dart format lib test
 
@@ -72,7 +80,7 @@ jobs:
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-v1.0.0-Build17-APK
+          name: AGAN-PONSEL-v1.0.2-Build19-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14

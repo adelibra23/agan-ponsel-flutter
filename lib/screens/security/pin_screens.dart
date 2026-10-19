@@ -16,6 +16,7 @@ class PinGate extends StatefulWidget {
 class _PinGateState extends State<PinGate> with WidgetsBindingObserver {
   bool checking = true;
   bool locked = false;
+  bool checkFailed = false;
   DateTime? backgrounded;
 
   @override
@@ -26,8 +27,22 @@ class _PinGateState extends State<PinGate> with WidgetsBindingObserver {
   }
 
   Future<void> initialize() async {
-    final required = await PinSecurity.enabled;
-    if (mounted) setState(() { locked = required; checking = false; });
+    if (mounted) setState(() { checking = true; checkFailed = false; });
+    try {
+      final required = await PinSecurity.enabled.timeout(
+        const Duration(seconds: 10));
+      if (mounted) setState(() {
+        locked = required;
+        checking = false;
+      });
+    } catch (_) {
+      // Fail closed: never bypass an existing PIN after a storage error.
+      if (mounted) setState(() {
+        locked = true;
+        checkFailed = true;
+        checking = false;
+      });
+    }
   }
 
   @override
@@ -42,7 +57,13 @@ class _PinGateState extends State<PinGate> with WidgetsBindingObserver {
   }
 
   Future<void> lockIfEnabled() async {
-    if (await PinSecurity.enabled && mounted) setState(() => locked = true);
+    try {
+      if (await PinSecurity.enabled && mounted) setState(() => locked = true);
+    } catch (_) {
+      // A storage failure must not accidentally leave a previously secured
+      // session open. Ask the user to retry reading their security settings.
+      if (mounted) setState(() { locked = true; checkFailed = true; });
+    }
   }
 
   @override
@@ -51,6 +72,26 @@ class _PinGateState extends State<PinGate> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     if (checking) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (checkFailed) {
+      return Scaffold(body: SafeArea(child: Center(child: Padding(
+        padding: const EdgeInsets.all(24), child: Column(
+        mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.lock_outline_rounded, size: 46),
+          const SizedBox(height: 16),
+          const Text('Pengaturan keamanan belum bisa dibaca',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('Data tetap tersimpan. Jangan hapus data aplikasi. '
+            'Periksa penyimpanan Android, lalu coba lagi.',
+            textAlign: TextAlign.center),
+          const SizedBox(height: 18),
+          FilledButton.icon(onPressed: initialize,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Coba Lagi')),
+        ],
+      )))));
+    }
     // Keep the app mounted behind the lock when backgrounded; do not re-open DB.
     return Stack(children: [
       widget.child,
@@ -77,9 +118,14 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
   @override
   void initState() { super.initState(); checkBiometrics(); }
   Future<void> checkBiometrics() async {
-    final enabled = await BiometricSecurity.isEnabled;
-    final available = enabled && await BiometricSecurity.available;
-    if (mounted) setState(() => biometricsReady = available);
+    try {
+      final enabled = await BiometricSecurity.isEnabled;
+      final available = enabled && await BiometricSecurity.available;
+      if (mounted) setState(() => biometricsReady = available);
+    } catch (_) {
+      // Biometric failure must never prevent PIN unlock.
+      if (mounted) setState(() => biometricsReady = false);
+    }
   }
 
   Future<void> unlockBiometric() async {
@@ -90,6 +136,8 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
       if (!mounted) return;
       if (success) { widget.onUnlocked(); return; }
       setState(() => message = 'Verifikasi gagal; gunakan PIN atau coba lagi.');
+    } catch (_) {
+      if (mounted) setState(() => message = 'Biometrik tidak tersedia. Gunakan PIN.');
     } finally { if (mounted) setState(() => busy = false); }
   }
 
@@ -107,6 +155,9 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
       setState(() => message = result.cooldownSeconds > 0
           ? 'Terlalu banyak percobaan. Tunggu ${result.cooldownSeconds} detik.'
           : 'PIN salah. Silakan coba kembali.');
+    } catch (_) {
+      if (mounted) setState(() => message =
+        'PIN belum dapat diperiksa. Data tidak dihapus; coba lagi.');
     } finally { if (mounted) setState(() => busy = false); }
   }
 
