@@ -6,7 +6,8 @@ import '../../services/ai_gateway.dart';
 import '../../core/format.dart';
 import '../../widgets/kit.dart';
 
-/// User-provided secrets never get shown after they have been stored.
+/// Owner can review the stored key after tapping the eye icon.
+/// The text is obscured by default and never logged or exported.
 class AganaAiSettingsScreen extends StatefulWidget {
   const AganaAiSettingsScreen({super.key});
   @override
@@ -32,12 +33,17 @@ class _AganaAiSettingsScreenState extends State<AganaAiSettingsScreen> {
   Future<void> initialize() async {
     try {
       final config = await AiGateway.load();
-      final saved = await AiGateway.hasKey(config.provider);
+      final existingKey = await AiGateway.readStoredKey(config.provider);
       if (!mounted) return;
       setState(() {
-        provider = config.provider; modelController.text = config.model;
-        enabled = config.enabled; shortAnswers = config.shortAnswers;
-        keySaved = saved; busy = false;
+        provider = config.provider;
+        modelController.text = config.model;
+        keyController.text = existingKey ?? '';
+        enabled = config.enabled;
+        shortAnswers = config.shortAnswers;
+        keySaved = existingKey != null && existingKey.isNotEmpty;
+        hideKey = true;
+        busy = false;
       });
     } catch (e) {
       if (mounted) { setState(() => busy = false); notify(context, 'Pengaturan AI tidak dapat dibuka: $e'); }
@@ -46,13 +52,25 @@ class _AganaAiSettingsScreenState extends State<AganaAiSettingsScreen> {
 
   Future<void> selectProvider(String next) async {
     if (busy) return;
-    final chosen = AiProviders.byId(next);
-    final existing = await AiGateway.hasKey(chosen.id);
-    if (!mounted) return;
-    setState(() {
-      provider = chosen.id; modelController.text = chosen.model;
-      keySaved = existing; keyController.clear(); testResult = null;
-    });
+    setState(() => busy = true);
+    try {
+      final chosen = AiProviders.byId(next);
+      final existingKey = await AiGateway.readStoredKey(chosen.id);
+      final savedModel = await AiGateway.modelForProvider(chosen.id);
+      if (!mounted) return;
+      setState(() {
+        provider = chosen.id;
+        modelController.text = savedModel;
+        keyController.text = existingKey ?? '';
+        keySaved = existingKey != null && existingKey.isNotEmpty;
+        hideKey = true;
+        testResult = null;
+      });
+    } catch (e) {
+      if (mounted) notify(context, 'Gagal memuat API key: $e');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 
   Future<bool> saveSettings() async {
@@ -62,9 +80,14 @@ class _AganaAiSettingsScreenState extends State<AganaAiSettingsScreen> {
       await AiGateway.save(provider: provider, model: modelController.text,
         enabled: enabled, shortAnswers: shortAnswers,
         newApiKey: keyController.text.isNotEmpty ? keyController.text : null);
-      final saved = await AiGateway.hasKey(provider);
+      final savedKey = await AiGateway.readStoredKey(provider);
       if (!mounted) return false;
-      setState(() { keySaved = saved; keyController.clear(); testResult = null; });
+      setState(() {
+        keySaved = savedKey != null && savedKey.isNotEmpty;
+        keyController.text = savedKey ?? '';
+        hideKey = true;
+        testResult = null;
+      });
       notify(context, 'Pengaturan AGANA disimpan dengan aman');
       return true;
     } catch (e) {
@@ -156,9 +179,10 @@ class _AganaAiSettingsScreenState extends State<AganaAiSettingsScreen> {
             const SizedBox(height: 11),
             TextField(controller: keyController, obscureText: hideKey,
               autocorrect: false, enableSuggestions: false,
+              keyboardType: TextInputType.visiblePassword,
               inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
               decoration: inputDecoration(keySaved
-                  ? 'API key baru (kosong = tetap gunakan yang tersimpan)'
+                  ? 'API key tersimpan (ketuk mata untuk melihat atau ubah)'
                   : 'Tempel API key dari penyedia', icon: Icons.key_rounded).copyWith(
                 suffixIcon: IconButton(tooltip: hideKey ? 'Lihat input' : 'Sembunyikan input',
                   onPressed: () => setState(() => hideKey = !hideKey),
@@ -169,7 +193,7 @@ class _AganaAiSettingsScreenState extends State<AganaAiSettingsScreen> {
               Icon(keySaved ? Icons.verified_user_rounded : Icons.info_outline,
                 color: keySaved ? const Color(0xFF1CA581) : scheme.onSurfaceVariant, size: 17),
               const SizedBox(width: 7),
-              Expanded(child: Text(keySaved ? 'Kunci tersimpan di penyimpanan aman Android' : 'Belum ada API key tersimpan',
+              Expanded(child: Text(keySaved ? 'API key tersimpan, tersedia di kolom (disembunyikan secara default)' : 'Belum ada API key tersimpan',
                 style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant))),
             ]),
             const SizedBox(height: 10),

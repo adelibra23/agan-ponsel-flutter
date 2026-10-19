@@ -82,13 +82,27 @@ jobs:
       - name: Run basic unit tests
         run: flutter test test/format_test.dart test/feature_test.dart test/theme_contrast_test.dart test/receivables_test.dart test/agana_intents_test.dart test/ai_providers_test.dart test/receivable_details_test.dart test/receivable_receipt_test.dart
 
+      - name: Install Node.js 22 for WhatsApp tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate AGANA WhatsApp integration
+        run: python3 scripts/check_wa_feature.py
+
+      - name: Test WhatsApp Agent Webhook
+        run: |
+          node --version
+          cd whatsapp-agent-server
+          node --test
+
       - name: Build release APK
         run: flutter build apk --release
 
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-v1.0.3-Build20-APK
+          name: AGAN-PONSEL-v1.1.0-Build21-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14

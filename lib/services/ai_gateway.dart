@@ -72,6 +72,17 @@ class AiGateway {
     await prefs.setBool(_enabledKey, enabled);
   }
 
+  /// Reads the selected provider key from encrypted Android storage.
+  /// Show it only in the owner's settings UI, obscured by default.
+  static Future<String?> readStoredKey(String provider) =>
+      _vault.read(key: _keySlot(provider));
+
+  static Future<String> modelForProvider(String provider) async {
+    final chosen = AiProviders.byId(provider);
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_modelSlot(chosen.id)) ?? chosen.model;
+  }
+
   static Future<bool> hasKey(String provider) async {
     final stored = await _vault.read(key: _keySlot(provider));
     return stored != null && stored.trim().isNotEmpty;

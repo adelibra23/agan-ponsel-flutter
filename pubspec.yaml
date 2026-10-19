@@ -1,7 +1,7 @@
 name: agan_ponsel
 description: AGAN PONSEL Android - dashboard, kasir, stok, service, laporan.
 publish_to: none
-version: 1.0.3+20
+version: 1.1.0+21
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

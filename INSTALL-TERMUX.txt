@@ -1,9 +1,10 @@
-AGAN PONSEL v1.0.2 Build19 STARTUP HOTFIX
+AGAN PONSEL v1.1.0 Build 21 — OVERLAY UNTUK SOURCE YANG SUDAH ADA
 
 cd ~/agan-build/agan_ponsel_flutter
-unzip -o /sdcard/Download/AGAN-PONSEL-Flutter-v1.0.2-Build19-Startup-Hotfix.zip
-git add lib pubspec.yaml scripts .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt assets test
-git commit -m "AGAN PONSEL v1.0.2 Build19 Startup Hotfix"
+unzip -o /sdcard/Download/AGAN-PONSEL-Flutter-v1.1.0-Build21-WhatsApp-Agent.zip
+git add lib pubspec.yaml README.md CHANGELOG.md INSTALL-TERMUX.txt whatsapp-agent-server .github/workflows/build-apk.yml
+git commit -m "AGAN PONSEL v1.1.0 Build21 AGANA WhatsApp"
 git push origin main
 
-BUKAN APK; build dan uji dengan GitHub Actions. Jangan uninstall atau hapus data aplikasi lama.
+Konfigurasi balasan otomatis WhatsApp membutuhkan SERVER HTTPS dan WA Cloud API Meta.
+Baca whatsapp-agent-server/README.md. Jangan upload .env, token Meta, PIN, atau SQLite pelanggan ke repo.
