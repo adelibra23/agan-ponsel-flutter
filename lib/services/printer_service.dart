@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/database.dart';
 import '../core/format.dart';
+import 'receivable_receipt_service.dart';
 
 class AganPrinter {
   AganPrinter._();
@@ -126,6 +127,13 @@ class AganPrinter {
     final width = (await paperSize) == 80 ? 48 : 32;
     return '${_center(shop, width)}\n${_center(address, width)}\n${'-' * width}\n'
         '__FOOTER__${_latinSafe(footer)}';
+  }
+
+  /// Nota piutang thermal monokrom ESC/POS 58/80 mm. Perangkat harus sudah
+  /// dipasangkan pada Pengaturan -> Printer Bluetooth.
+  static Future<void> printReceivable(ReceivableReceiptData receipt) async {
+    final width = (await paperSize) == 80 ? 48 : 32;
+    await printText(receivableThermalText(receipt, chars: width));
   }
 
   static Future<void> printSale(SaleResult sale) async {

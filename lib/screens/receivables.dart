@@ -9,6 +9,9 @@ import '../core/database.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
 import '../services/receivables_service.dart';
+import '../services/receivable_receipt_service.dart';
+import '../services/printer_service.dart';
+import 'receivable_receipt_preview.dart';
 import '../widgets/kit.dart';
 
 /// Pusat piutang dan jatuh tempo; pengingat muncul saat aplikasi dibuka.
@@ -445,13 +448,41 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
   late Future<List<Receivable>> loader;
   late Future<List<Map<String, Object?>>> payments;
   late Future<List<ReceivableLine>> items;
+  late Future<List<Map<String, Object?>>> receiptEvents;
+  bool printingDebt = false;
   @override
   void initState() { super.initState(); refresh(); }
   void refresh() => setState(() {
     loader = ReceivablesService.all();
     payments = ReceivablesService.payments(widget.id);
     items = ReceivablesService.lines(widget.id);
+    receiptEvents = ReceivableReceiptService.history(widget.id);
   });
+
+  Future<void> openDigitalReceipt(Receivable item) async {
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (_) => ReceivableReceiptPreviewScreen(receivableId: item.id)));
+    if (mounted) refresh();
+  }
+
+  Future<void> quickPrint(Receivable item) async {
+    if (printingDebt) return;
+    setState(() => printingDebt = true);
+    try {
+      final receipt = await ReceivableReceiptService.load(item.id);
+      await AganPrinter.printReceivable(receipt);
+      final selected = await ReceivableReceiptService.selectedTemplate();
+      await ReceivableReceiptService.logAction(item.id, 'print_dispatched', selected);
+      if (mounted) {
+        refresh();
+        notify(context, 'Perintah cetak sudah dikirim. Periksa printer thermal.');
+      }
+    } catch (e) {
+      if (mounted) notify(context, 'Gagal cetak: $e. Pilih perangkat melalui Pengaturan Printer Bluetooth.');
+    } finally {
+      if (mounted) setState(() => printingDebt = false);
+    }
+  }
 
   Future<void> recordPayment(Receivable item) async {
     final amount = TextEditingController(text: '${item.remaining}');
@@ -641,8 +672,18 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
         FilledButton.tonalIcon(onPressed: () => editDetails(item),
           icon: const Icon(Icons.edit_note_rounded), label: const Text('Edit Detail Piutang')),
         const SizedBox(height: 9),
+        FilledButton.icon(onPressed: () => openDigitalReceipt(item),
+          icon: const Icon(Icons.receipt_long_rounded), label: const Text('Lihat & Bagikan Gambar Nota (PNG)')),
+        const SizedBox(height: 9),
+        OutlinedButton.icon(onPressed: printingDebt ? null : () => quickPrint(item),
+          icon: const Icon(Icons.print_rounded), label: const Text('Print Thermal 58 / 80 mm')),
+        const SizedBox(height: 9),
         OutlinedButton.icon(onPressed: () => sendWhatsApp(item),
-          icon: const Icon(Icons.send_rounded), label: const Text('Kirim ke WhatsApp')),
+          icon: const Icon(Icons.send_rounded), label: const Text('WhatsApp: Kirim Pesan Teks')),
+        const Padding(padding: EdgeInsets.only(top: 6),
+          child: Text('Untuk mengirim nota PNG ke WhatsApp, buka Lihat & Bagikan Gambar Nota, '
+            'pilih Bagikan Gambar, lalu pilih WhatsApp dan pelanggan.',
+            style: TextStyle(fontSize: 11))),
         const SizedBox(height: 13),
         if (!item.isPaid) ...[
           FilledButton.icon(onPressed: () => recordPayment(item),
@@ -654,6 +695,28 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
           TextButton.icon(onPressed: () => changeDate(item),
             icon: const Icon(Icons.edit_calendar_rounded), label: const Text('Ubah Jatuh Tempo')),
         ],
+        const SizedBox(height: 18),
+        const SectionTitle('Aktivitas Nota'),
+        FutureBuilder<List<Map<String, Object?>>>(future: receiptEvents, builder: (ctx, activity) {
+          if (!activity.hasData) return const ScreenLoading();
+          if (activity.data!.isEmpty) return const Surface(child: Text('Belum ada nota yang dicetak atau dibagikan.'));
+          return Column(children: [for (final event in activity.data!) Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Surface(child: Row(children: [
+              const Icon(Icons.history_toggle_off_rounded, size: 21),
+              const SizedBox(width: 11),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(switch (event['action']) {
+                  'print_dispatched' => 'Perintah cetak dikirim ke printer',
+                  'image_saved' => 'Gambar nota disimpan',
+                  _ => 'Menu Bagikan dibuka (belum tentu terkirim)',
+                }, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                Text('${dateLabel('${event['created_at']}')}  ${timeLabel('${event['created_at']}')}',
+                  style: const TextStyle(fontSize: 11)),
+              ])),
+            ])),
+          )]);
+        }),
         const SizedBox(height: 18),
         const SectionTitle('Riwayat Pembayaran'),
         FutureBuilder<List<Map<String, Object?>>>(future: payments, builder: (ctx, p) {

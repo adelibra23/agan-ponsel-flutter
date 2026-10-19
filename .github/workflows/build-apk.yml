@@ -57,11 +57,14 @@ jobs:
       - name: Smoke test receivable detail migration
         run: python3 scripts/smoke_receivable_details.py
 
+      - name: Smoke test receipt records and v10 migration
+        run: python3 scripts/smoke_receipt_v10.py
+
       - name: Analyze Flutter code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run basic unit tests
-        run: flutter test test/format_test.dart test/feature_test.dart test/theme_contrast_test.dart test/receivables_test.dart test/agana_intents_test.dart test/ai_providers_test.dart test/receivable_details_test.dart
+        run: flutter test test/format_test.dart test/feature_test.dart test/theme_contrast_test.dart test/receivables_test.dart test/agana_intents_test.dart test/ai_providers_test.dart test/receivable_details_test.dart test/receivable_receipt_test.dart
 
       - name: Build release APK
         run: flutter build apk --release
@@ -69,7 +72,7 @@ jobs:
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-v0.9.3-Build16-APK
+          name: AGAN-PONSEL-v1.0.0-Build17-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14

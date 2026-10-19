@@ -1,21 +1,14 @@
-AGAN PONSEL Flutter v0.9.3 Build16
-
-AGAN PONSEL Flutter v0.9.0 Build 13 - Ikon AG Orbit + Splash 3D + AGANA AI
-
-1) Unduh AGAN-PONSEL-Flutter-v0.9.0-Build13.zip dan simpan di Download HP.
-2) Buka Termux dan jalankan:
+AGAN PONSEL Flutter v1.0.0 Build 17
+=================================
+Simpan ZIP di folder Download HP kemudian jalankan:
 
 cd ~/agan-build/agan_ponsel_flutter
-unzip -o "/sdcard/Download/AGAN-PONSEL-Flutter-v0.9.0-Build13.zip"
-git add lib assets pubspec.yaml scripts test .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt
-git commit -m "AGAN PONSEL Flutter v0.9.0 Build13"
+unzip -o "/sdcard/Download/AGAN-PONSEL-Flutter-v1.0.0-Build17.zip"
+git add lib pubspec.yaml scripts test .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt
+git commit -m "AGAN PONSEL Flutter v1.0.0 Build17 Nota Piutang"
 git push origin main
 
-3) Buka https://github.com/adelibra23/agan-ponsel-flutter/actions
-4) Pilih build terbaru. Jika hijau, buka Artifact > AGAN-PONSEL-v0.9.0-Build13-APK.
-5) Ekstrak ZIP Artifact dan install app-release.apk.
-6) Jangan uninstall versi lama sebelum backup diuji. Upgrade APK mensyaratkan keystore penandatanganan dan applicationId konsisten.
-7) Untuk AGANA: buka Pengaturan > AGANA • Pengaturan API > pilih provider, tempel key, Simpan, Uji Koneksi, lalu aktifkan AI internet.
-8) Jangan pernah menaruh API key di GitHub, file Dart, atau screenshot yang dibagikan.
+Periksa hasil di https://github.com/adelibra23/agan-ponsel-flutter/actions
+Jika build sukses, unduh artifact AGAN-PONSEL-v1.0.0-Build17-APK.
 
-JIKA BUILD GAGAL: buka langkah pertama yang berwarna merah dalam GitHub Actions dan kirim screenshot/log error. Pembuatan APK langsung dengan Flutter di Termux ARM64 biasa tidak didukung resmi; GitHub Actions membangun di mesin Linux.
+PENTING: buat backup sebelum memasang APK baru; jangan uninstall aplikasi lama.

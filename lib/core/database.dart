@@ -80,7 +80,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
@@ -90,6 +90,7 @@ class AppDatabase {
         await _createReceivables(db);
         await _createAgentAudit(db);
         await _createReceivableLines(db);
+        await _createReceiptEvents(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -117,8 +118,25 @@ class AppDatabase {
         if (oldVersion < 9) {
           await _createReceivableLines(db);
         }
+        if (oldVersion < 10) {
+          await _createReceiptEvents(db);
+        }
       },
     );
+  }
+
+  // v10: Riwayat PERINTAH nota piutang, bukan bukti pesan WA terkirim.
+  static Future<void> _createReceiptEvents(DatabaseExecutor db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS receivable_receipt_events(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      receivable_id INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      destination TEXT NOT NULL DEFAULT '',
+      template TEXT NOT NULL DEFAULT 'orbit',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(receivable_id) REFERENCES receivables(id)
+    )''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_receivable_receipt_events_parent ON receivable_receipt_events(receivable_id)');
   }
 
   // v9: Rincian terpisah per piutang, aman bagi piutang legacy tanpa baris.
