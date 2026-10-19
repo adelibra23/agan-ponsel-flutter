@@ -1,7 +1,7 @@
 name: agan_ponsel
 description: AGAN PONSEL Android - dashboard, kasir, stok, service, laporan.
 publish_to: none
-version: 1.0.2+19
+version: 1.0.3+20
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -32,6 +32,11 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.6
+
+# Hotfix Android release startup regression in shared_preferences_android 2.5.0.
+# Keep the version fixed until a verified upstream R8/JNI fix is available.
+dependency_overrides:
+  shared_preferences_android: 2.4.28
 
 flutter:
   uses-material-design: true

@@ -39,6 +39,14 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      - name: Verify safe Android preferences plugin
+        run: |
+          flutter pub deps --style=compact > /tmp/agan-deps.txt
+          if ! grep -E 'shared_preferences_android[[:space:]]+2\.4\.28([[:space:]]|$)' /tmp/agan-deps.txt; then
+            echo '::error::shared_preferences_android must remain at version 2.4.28 in Build 20.'
+            exit 1
+          fi
+
       - name: Generate branded Android launcher icon
         run: dart run flutter_launcher_icons
 
@@ -80,7 +88,7 @@ jobs:
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-v1.0.2-Build19-APK
+          name: AGAN-PONSEL-v1.0.3-Build20-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
