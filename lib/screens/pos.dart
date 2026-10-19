@@ -128,7 +128,7 @@ class _PosScreenState extends State<PosScreen> {
         ('${p.name} ${p.sku}'.toLowerCase().contains(search.toLowerCase()))).toList();
       return Column(children: [
         Expanded(child: RefreshIndicator(onRefresh: () async { refresh(); await loader; },
-          child: CustomScrollView(slivers: [
+          child: CustomScrollView(key: const PageStorageKey('pos-scroll'), slivers: [
             SliverToBoxAdapter(child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

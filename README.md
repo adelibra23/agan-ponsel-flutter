@@ -1,3 +1,43 @@
+# AGAN PONSEL Flutter v0.9.3 Build 16
+
+## Tambahan pada versi ini
+
+- **Piutang terperinci**: catat 1–30 baris barang/jasa dengan kolom nama, kuantitas, harga satuan dan subtotal; total otomatis. Semua nilai Rupiah, tanpa pecahan.
+- **Edit Detail Piutang**: ubah pelanggan, nomor WhatsApp, baris barang, nominal harga, jatuh tempo dan catatan. Pembayaran/cicilan lama tidak dihapus. Total baru tidak boleh di bawah jumlah cicilan yang tercatat.
+- **Kirim WhatsApp**: preview pesan penagihan sesuai template, kemudian buka WhatsApp atau browser dengan teks telah terisi untuk pengguna mengirim sendiri. Tanpa otomasi pengiriman dan tanpa unggah data pelanggan ke layanan AI.
+- **Cari Kontak HP**: gunakan tombol di form piutang untuk mencari dan memilih kontak setelah Android memberi izin read-only; tidak mengimpor seluruh kontak.
+- **Navigasi dan scroll**: tab Beranda, Kasir, Produk, Service dan Menu Lainnya mempertahankan state/scroll lewat `IndexedStack`, dengan `PageStorageKey` untuk daftar penting saat kembali dari subhalaman.
+- **SQLite skema v9**: tabel `receivable_items`, semua piutang dan pembayaran versi lama tetap tersedia, dan backup JSON mendukung tabel baru dan file backup skema 4–8.
+- Source ini juga sudah memasukkan hotfix dari v0.9.1 dan v0.9.2 (`flutter_secure_storage ^11.2.0` dan konstruktor `StateError`).
+
+## Cara build melalui HP + Termux + GitHub Actions
+
+1. Pastikan proyek lama sudah ada pada `~/agan-build/agan_ponsel_flutter`, serta ada repo GitHub yang sudah terhubung.
+2. Simpan ZIP update di folder **Download** Android. Ekstrak hanya file ZIP update ke folder proyek, lalu jalankan:
+
+```bash
+cd ~/agan-build/agan_ponsel_flutter
+unzip -o /sdcard/Download/AGAN-PONSEL-Flutter-v0.9.3-Build16.zip
+git add lib pubspec.yaml scripts test .github/workflows/build-apk.yml README.md CHANGELOG.md INSTALL-TERMUX.txt
+git commit -m "AGAN PONSEL Flutter v0.9.3 Build16 Piutang Detail"
+git push origin main
+```
+
+3. Buka GitHub → Actions → Build AGAN PONSEL Flutter APK → tunggu hasilnya. Jika sukses, unduh artifact `AGAN-PONSEL-v0.9.3-Build16-APK` lalu ekstrak dan instal APK di HP.
+
+> **Penting:** Build ZIP belum diuji kompilasi Flutter/Android di lingkungan penyusunan ini. Hasil GitHub Actions perlu diperiksa. Jangan uninstall aplikasi yang memiliki data penting. Backup toko terlebih dahulu dan gunakan paket Android + sertifikat penandatanganan yang sama untuk upgrade tanpa kehilangan data.
+
+## Catatan privasi
+
+- Tombol WhatsApp membutuhkan internet dan pengguna tetap harus menekan **Kirim** secara manual dalam WhatsApp.
+- Nomor kontak dibaca hanya setelah pengguna memilih fitur kontak dan memberi izin.
+- Data piutang SQLite tidak dikirimkan otomatis ke AI atau jaringan luar.
+- Backup piutang menggunakan JSON tidak terenkripsi; simpan di tempat aman.
+
+---
+
+## Riwayat sebelumnya
+
 # AGAN PONSEL Flutter — v0.9.0 Build 13
 
 Proyek Android Flutter/Dart untuk operasional konter AGAN PONSEL, dikembangkan dari v0.8.0 Build 12. Semua fitur lokal lama tetap tersedia; tambahan AI internet **opsional**. Tidak ada API key dalam ZIP ini.

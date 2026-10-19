@@ -463,7 +463,7 @@ class AboutAganScreen extends StatelessWidget {
           SizedBox(height: 15),
           Text('AGAN PONSEL', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: Colors.white)),
           SizedBox(height: 5),
-          Text('Flutter Offline • v0.9.0 Build 13', style: TextStyle(color: Colors.white70)),
+          Text('Flutter Offline • v0.9.3 Build 16', style: TextStyle(color: Colors.white70)),
           SizedBox(height: 8),
           Text('Operasional toko, kasir, dan service HP dalam satu aplikasi',
             style: TextStyle(color: Colors.white, fontSize: 12), textAlign: TextAlign.center),

@@ -47,7 +47,7 @@ class _StoreNotesScreenState extends State<StoreNotesScreen> {
       if (!snap.hasData) return const ScreenLoading();
       if (snap.data!.isEmpty) return const EmptyView(icon: Icons.task_alt_rounded,
         title: 'Belum ada tugas', subtitle: 'Tambahkan tugas toko dari tombol +.');
-      return ListView(padding: const EdgeInsets.all(16), children: [
+      return ListView(key: const PageStorageKey('store-notes-scroll'), padding: const EdgeInsets.all(16), children: [
         const PageIntro('Daftar tugas lokal', 'Tandai tugas selesai tanpa internet'),
         for (final item in snap.data!) ...[
           Surface(child: Row(children: [

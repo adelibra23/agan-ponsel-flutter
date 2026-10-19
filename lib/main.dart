@@ -73,7 +73,10 @@ class _AppShellState extends State<AppShell> {
   int selected = 0;
   int refresh = 0;
   static const titles = ['Beranda', 'Kasir', 'Produk & Stok', 'Service HP', 'Menu Lainnya'];
-  void select(int tab) => setState(() { selected = tab; refresh++; });
+  // Keep all tab widgets mounted; switching tabs must not recreate their states.
+  void select(int tab) {
+    if (tab != selected) setState(() => selected = tab);
+  }
   void open(Widget page) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => page));
     if (mounted) setState(() => refresh++);
@@ -101,11 +104,12 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pages = <Widget>[
-      DashboardScreen(key: ValueKey('dash$refresh'), navigate: select, open: open),
-      PosScreen(key: ValueKey('pos$refresh')),
-      InventoryScreen(key: ValueKey('inv$refresh')),
-      ServicesScreen(key: ValueKey('svc$refresh')),
-      MoreScreen(key: ValueKey('more$refresh'), open: open, dark: isDark,
+      DashboardScreen(key: const PageStorageKey('tab-dashboard'),
+        dataRevision: refresh, navigate: select, open: open),
+      PosScreen(key: const PageStorageKey('tab-pos')),
+      InventoryScreen(key: const PageStorageKey('tab-inventory')),
+      ServicesScreen(key: const PageStorageKey('tab-services')),
+      MoreScreen(key: const PageStorageKey('tab-more'), open: open, dark: isDark,
         onThemeChanged: widget.onThemeChanged, template: widget.template,
         onTemplateChanged: widget.onTemplateChanged),
     ];
@@ -124,19 +128,9 @@ class _AppShellState extends State<AppShell> {
             onAgent: () => open(const AganaAgentScreen()),
             template: widget.template,
           ),
-          Expanded(child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 350),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(begin: const Offset(.045, .025), end: Offset.zero).animate(animation),
-                child: child,
-              ),
-            ),
-            child: KeyedSubtree(key: ValueKey('$selected-$refresh'), child: pages[selected]),
-          )),
+          // IndexedStack retains every tab State and its scroll position.
+          // Transition of the bottom bar remains animated independently.
+          Expanded(child: IndexedStack(index: selected, children: pages)),
           AnimatedBottomBar(index: selected, onSelected: select),
         ])),
       ),

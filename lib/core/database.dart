@@ -80,7 +80,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
@@ -89,6 +89,7 @@ class AppDatabase {
         await _createStoreExtras(db);
         await _createReceivables(db);
         await _createAgentAudit(db);
+        await _createReceivableLines(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -113,8 +114,26 @@ class AppDatabase {
         if (oldVersion < 8) {
           await _createAgentAudit(db);
         }
+        if (oldVersion < 9) {
+          await _createReceivableLines(db);
+        }
       },
     );
+  }
+
+  // v9: Rincian terpisah per piutang, aman bagi piutang legacy tanpa baris.
+  static Future<void> _createReceivableLines(DatabaseExecutor db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS receivable_items(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      receivable_id INTEGER NOT NULL,
+      description TEXT NOT NULL,
+      qty INTEGER NOT NULL CHECK(qty > 0),
+      unit_price INTEGER NOT NULL CHECK(unit_price >= 0),
+      total INTEGER NOT NULL CHECK(total >= 0),
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY(receivable_id) REFERENCES receivables(id)
+    )''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_receivable_items_parent ON receivable_items(receivable_id)');
   }
 
   // v8: Minimal action audit. Do not store chat text, phone numbers or PINs.

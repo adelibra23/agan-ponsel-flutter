@@ -84,7 +84,7 @@ class _ServicesScreenState extends State<ServicesScreen> with SingleTickerProvid
         '${s['customer']} ${s['device']} ${s['phone']} ${s['imei'] ?? ''}'
           .toLowerCase().contains(search.toLowerCase())).toList();
       return RefreshIndicator(onRefresh: () async { setState(refresh); await loader; },
-        child: ListView(padding: const EdgeInsets.fromLTRB(16, 18, 16, 110), children: [
+        child: ListView(key: const PageStorageKey('services-scroll'), padding: const EdgeInsets.fromLTRB(16, 18, 16, 110), children: [
           const PageIntro('Service Center', 'Riwayat perbaikan, status dan pembayaran perangkat'),
           Row(children: [
             Expanded(child: _ServiceSummary(label: 'Tiket', number: all.length,

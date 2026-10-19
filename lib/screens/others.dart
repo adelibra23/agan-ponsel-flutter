@@ -26,6 +26,7 @@ class MoreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
+    key: const PageStorageKey('more-menu-scroll'),
     padding: const EdgeInsets.fromLTRB(16, 20, 16, 25), children: [
       const PageIntro('Manajemen Toko', 'Fitur tambahan untuk operasional AGAN PONSEL'),
       _MenuItem(icon: Icons.auto_awesome_rounded, color: const Color(0xFF7356E9),
@@ -206,7 +207,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       if (snap.hasError) return EmptyView(icon: Icons.error_outline, title: 'Tidak bisa membaca pelanggan', subtitle: '${snap.error}');
       if (!snap.hasData) return const ScreenLoading();
       final data = snap.data!.where((row) => '${row['name']} ${row['phone']}'.toLowerCase().contains(query.toLowerCase())).toList();
-      return ListView(padding: const EdgeInsets.all(16), children: [
+      return ListView(key: const PageStorageKey('customers-list-scroll'), padding: const EdgeInsets.all(16), children: [
         SearchBox(hint: 'Cari nama atau nomor HP...', onChanged: (s) => setState(() => query = s)),
         const SizedBox(height: 16),
         if (data.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 90),
@@ -274,7 +275,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       if (snap.hasError) return EmptyView(icon: Icons.error_outline, title: 'Gagal memuat pengeluaran', subtitle: '${snap.error}');
       if (!snap.hasData) return const ScreenLoading();
       final data = snap.data!;
-      return ListView(padding: const EdgeInsets.all(16), children: [
+      return ListView(key: const PageStorageKey('expenses-list-scroll'), padding: const EdgeInsets.all(16), children: [
         Surface(child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           const Text('Total pengeluaran', style: TextStyle(fontWeight: FontWeight.w700)),
           Text(rupiah(data.fold<int>(0, (a, b) => a + (b['amount'] as int))),
@@ -362,7 +363,7 @@ class _DigitalScreenState extends State<DigitalScreen> {
       if (snap.hasError) return EmptyView(icon: Icons.error_outline, title: 'Gagal membaca transaksi', subtitle: '${snap.error}');
       if (!snap.hasData) return const ScreenLoading();
       final data = snap.data!;
-      return ListView(padding: const EdgeInsets.all(16), children: [
+      return ListView(key: const PageStorageKey('digital-list-scroll'), padding: const EdgeInsets.all(16), children: [
         Surface(child: Row(children: [
           const Icon(Icons.info_outline_rounded, color: brandBlue),
           const SizedBox(width: 10),
@@ -404,7 +405,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (snap.hasError) return EmptyView(icon: Icons.error_outline, title: 'Gagal membaca laporan', subtitle: '${snap.error}');
         if (!snap.hasData) return const ScreenLoading();
         final v = snap.data!;
-        return ListView(padding: const EdgeInsets.all(16), children: [
+        return ListView(key: const PageStorageKey('reports-scroll'), padding: const EdgeInsets.all(16), children: [
           SegmentedButton<bool>(segments: const [
             ButtonSegment(value: true, label: Text('Hari ini'), icon: Icon(Icons.today)),
             ButtonSegment(value: false, label: Text('Semua waktu'), icon: Icon(Icons.calendar_month)),
@@ -484,7 +485,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       if (snap.hasError) return EmptyView(icon: Icons.error_outline, title: 'Tidak bisa memuat riwayat', subtitle: '${snap.error}');
       if (!snap.hasData) return const ScreenLoading();
       final items = snap.data!;
-      return ListView(padding: const EdgeInsets.all(16), children: [
+      return ListView(key: const PageStorageKey('sales-history-scroll'), padding: const EdgeInsets.all(16), children: [
         Text('40 transaksi kasir terbaru • ketuk untuk melihat struk',
           style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
         const SizedBox(height: 14),
@@ -517,7 +518,7 @@ class StockHistoryScreen extends StatelessWidget {
       builder: (ctx, snap) {
         if (snap.hasError) return EmptyView(icon: Icons.error_outline, title: 'Gagal memuat stok', subtitle: '${snap.error}');
         if (!snap.hasData) return const ScreenLoading();
-        return ListView(padding: const EdgeInsets.all(16), children: [
+        return ListView(key: const PageStorageKey('stock-history-scroll'), padding: const EdgeInsets.all(16), children: [
           if (snap.data!.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 90),
             child: EmptyView(icon: Icons.swap_vert, title: 'Belum ada perubahan stok',
               subtitle: 'Riwayat tercatat saat stok diubah atau produk terjual.')),
@@ -556,7 +557,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) => StorePage(title: 'Pengaturan',
-    child: ListView(padding: const EdgeInsets.fromLTRB(16, 17, 16, 35), children: [
+    child: ListView(key: const PageStorageKey('settings-scroll'), padding: const EdgeInsets.fromLTRB(16, 17, 16, 35), children: [
       Container(padding: const EdgeInsets.all(19),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(25),
           gradient: const LinearGradient(colors: [Color(0xFF0735B1), Color(0xFF0E9AEF)])),

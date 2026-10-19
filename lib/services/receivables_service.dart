@@ -51,6 +51,39 @@ class Receivable {
   }
 }
 
+/// Baris item piutang. Harga satuan dan kuantitas disimpan secara eksplisit.
+class ReceivableLine {
+  final String description;
+  final int qty;
+  final int unitPrice;
+
+  const ReceivableLine({required this.description, required this.qty, required this.unitPrice});
+
+  int get total => qty * unitPrice;
+
+  factory ReceivableLine.fromRow(Map<String, Object?> row) => ReceivableLine(
+    description: row['description'] as String,
+    qty: (row['qty'] as num).toInt(),
+    unitPrice: (row['unit_price'] as num).toInt(),
+  );
+}
+
+/// Normalisasi nomor tujuan WhatsApp tanpa mengirimkan pesan.
+/// 08... atau 8... diperlakukan sebagai nomor Indonesia; +CC dipertahankan.
+String? whatsappPhone(String raw) {
+  final input = raw.trim();
+  if (input.isEmpty || !RegExp(r'^\+?[0-9\s().-]+$').hasMatch(input)) return null;
+  var digits = input.replaceAll(RegExp(r'[^0-9]'), '');
+  if (digits.startsWith('00')) digits = digits.substring(2);
+  if (digits.startsWith('0')) {
+    digits = '62${digits.substring(1)}';
+  } else if (digits.startsWith('8')) {
+    digits = '62$digits';
+  }
+  if (digits.length < 9 || digits.length > 15 || digits.startsWith('0')) return null;
+  return digits;
+}
+
 class ReceivableSummary {
   final int totalOutstanding;
   final int overdueAmount;
@@ -94,6 +127,103 @@ class ReceivablesService {
       'description': description.trim(), 'amount': amount,
       'due_date': dueDate.toIso8601String().substring(0, 10),
       'notes': notes.trim(), 'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Mengembalikan baris transaksi. Piutang versi lama boleh tanpa rincian.
+  static Future<List<ReceivableLine>> lines(int id) async {
+    final db = await AppDatabase.instance;
+    final rows = await db.query('receivable_items', where: 'receivable_id=?',
+      whereArgs: [id], orderBy: 'sort_order ASC, id ASC');
+    return rows.map(ReceivableLine.fromRow).toList();
+  }
+
+  static int calculateTotal(List<ReceivableLine> lines) {
+    if (lines.isEmpty || lines.length > 30) {
+      throw const FormatException('Isi 1 sampai 30 baris barang atau jasa');
+    }
+    var total = 0;
+    for (final line in lines) {
+      if (line.description.trim().isEmpty || line.description.trim().length > 120 ||
+          line.qty <= 0 || line.qty > 10000 ||
+          line.unitPrice < 0 || line.unitPrice > 1000000000) {
+        throw const FormatException('Nama, jumlah, atau harga barang tidak valid');
+      }
+      total += line.total;
+      if (total > 1000000000) {
+        throw const FormatException('Total piutang maksimal Rp1 miliar');
+      }
+    }
+    if (total <= 0) throw const FormatException('Total piutang harus lebih dari Rp0');
+    return total;
+  }
+
+  static String _date(DateTime date) => date.toIso8601String().substring(0, 10);
+
+  static Future<int> createDetailed({required String customer,
+    required String phone, required String description, required DateTime dueDate,
+    required List<ReceivableLine> lines, String notes = ''}) async {
+    final total = calculateTotal(lines);
+    if (customer.trim().isEmpty || customer.trim().length > 120 ||
+        description.trim().isEmpty || description.trim().length > 500) {
+      throw const FormatException('Isi nama pelanggan dan ringkasan transaksi');
+    }
+    final db = await AppDatabase.instance;
+    return db.transaction<int>((txn) async {
+      final id = await txn.insert('receivables', {
+        'customer_name': customer.trim(), 'phone': phone.trim(),
+        'description': description.trim(), 'amount': total,
+        'due_date': _date(dueDate), 'notes': notes.trim(),
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      for (var i = 0; i < lines.length; i++) {
+        final line = lines[i];
+        await txn.insert('receivable_items', {
+          'receivable_id': id, 'description': line.description.trim(),
+          'qty': line.qty, 'unit_price': line.unitPrice, 'total': line.total,
+          'sort_order': i,
+        });
+      }
+      return id;
+    });
+  }
+
+  /// Perbarui identitas/rincian secara atomik. Tidak pernah menghapus cicilan.
+  /// Total baru harus >= pembayaran yang sudah tercatat.
+  static Future<void> editDetailed({required int receivableId,
+    required String customer, required String phone, required String description,
+    required String notes, required DateTime dueDate,
+    required List<ReceivableLine> lines}) async {
+    final total = calculateTotal(lines);
+    if (customer.trim().isEmpty || customer.trim().length > 120 ||
+        description.trim().isEmpty || description.trim().length > 500) {
+      throw const FormatException('Nama dan ringkasan transaksi wajib diisi');
+    }
+    final db = await AppDatabase.instance;
+    await db.transaction<void>((txn) async {
+      final existing = await txn.query('receivables', where: 'id=?',
+        whereArgs: [receivableId], limit: 1);
+      if (existing.isEmpty) throw StateError('Piutang tidak ditemukan');
+      final result = await txn.rawQuery('SELECT COALESCE(SUM(amount),0) AS paid FROM receivable_payments WHERE receivable_id=?', [receivableId]);
+      final paid = (result.single['paid'] as num).toInt();
+      if (total < paid) {
+        throw StateError('Total baru tidak boleh kurang dari cicilan tercatat');
+      }
+      await txn.update('receivables', {
+        'customer_name': customer.trim(), 'phone': phone.trim(),
+        'description': description.trim(), 'notes': notes.trim(),
+        'amount': total, 'due_date': _date(dueDate),
+      }, where: 'id=?', whereArgs: [receivableId]);
+      await txn.delete('receivable_items', where: 'receivable_id=?',
+        whereArgs: [receivableId]);
+      for (var i = 0; i < lines.length; i++) {
+        final line = lines[i];
+        await txn.insert('receivable_items', {
+          'receivable_id': receivableId, 'description': line.description.trim(),
+          'qty': line.qty, 'unit_price': line.unitPrice,
+          'total': line.total, 'sort_order': i,
+        });
+      }
     });
   }
 

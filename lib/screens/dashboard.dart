@@ -17,7 +17,9 @@ import 'agana_agent.dart';
 class DashboardScreen extends StatefulWidget {
   final ValueChanged<int> navigate;
   final ValueChanged<Widget> open;
-  const DashboardScreen({super.key, required this.navigate, required this.open});
+  final int dataRevision;
+  const DashboardScreen({super.key, required this.navigate,
+    required this.open, this.dataRevision = 0});
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -26,6 +28,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late Future<Map<String, int>> stats;
   @override
   void initState() { super.initState(); stats = AppDatabase.summary(todayOnly: true); }
+  @override
+  void didUpdateWidget(covariant DashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.dataRevision != widget.dataRevision) {
+      stats = AppDatabase.summary(todayOnly: true);
+    }
+  }
   void reload() => setState(() => stats = AppDatabase.summary(todayOnly: true));
 
   @override
@@ -37,6 +46,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (!snap.hasData) return const ScreenLoading();
       final data = snap.data!;
       return RefreshIndicator(onRefresh: () async { reload(); await stats; }, child: ListView(
+        key: const PageStorageKey('dashboard-scroll'),
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 26), children: [
         _Welcome(onTap: reload),
         const SizedBox(height: 12),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'contact_picker.dart';
 
 import '../core/database.dart';
 import '../core/format.dart';
@@ -59,7 +62,7 @@ class _ReceivablesScreenState extends State<ReceivablesScreen> {
         }
       }).toList();
       return RefreshIndicator(onRefresh: () async { refresh(); await loader; },
-        child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), children: [
+        child: ListView(key: const PageStorageKey('receivable-list-scroll'), padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), children: [
           _DebtHero(outstanding: outstanding, late: late, count: reminders),
           const SizedBox(height: 19),
           SearchBox(hint: 'Cari pelanggan, nomor, atau keterangan...', onChanged: (s) => setState(() => query = s)),
@@ -155,106 +158,279 @@ class _ReceivableTile extends StatelessWidget {
   }
 }
 
+class _DebtRow {
+  final TextEditingController label;
+  final TextEditingController qty;
+  final TextEditingController price;
+
+  _DebtRow({String title = '', int quantity = 1, int unitPrice = 0})
+      : label = TextEditingController(text: title),
+        qty = TextEditingController(text: '$quantity'),
+        price = TextEditingController(text: unitPrice == 0 ? '' : '$unitPrice');
+
+  void dispose() { label.dispose(); qty.dispose(); price.dispose(); }
+}
+
+/// Form create/edit memakai sumber data sama, total hasil perhitungan item.
+/// Riwayat cicilan lama tetap dipertahankan oleh ReceivablesService.editDetailed.
 class CreateReceivableScreen extends StatefulWidget {
-  const CreateReceivableScreen({super.key});
+  final Receivable? existing;
+  final List<ReceivableLine>? initialItems;
+  const CreateReceivableScreen({super.key, this.existing, this.initialItems});
+
   @override
   State<CreateReceivableScreen> createState() => _CreateReceivableScreenState();
 }
 
 class _CreateReceivableScreenState extends State<CreateReceivableScreen> {
   final form = GlobalKey<FormState>();
-  final customer = TextEditingController();
-  final phone = TextEditingController();
-  final description = TextEditingController();
-  final amount = TextEditingController();
-  final notes = TextEditingController();
-  DateTime due = DateTime.now().add(const Duration(days: 7));
+  late final TextEditingController customer;
+  late final TextEditingController phone;
+  late final TextEditingController description;
+  late final TextEditingController notes;
+  late DateTime due;
+  final List<_DebtRow> rows = [];
   bool saving = false;
+  bool get editing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    customer = TextEditingController(text: existing?.customer ?? '');
+    phone = TextEditingController(text: existing?.phone ?? '');
+    description = TextEditingController(text: existing?.description ?? '');
+    notes = TextEditingController(text: existing?.notes ?? '');
+    due = existing == null
+        ? DateTime.now().add(const Duration(days: 7))
+        : DateTime.parse(existing.dueDate);
+    final initial = widget.initialItems ?? const <ReceivableLine>[];
+    if (initial.isNotEmpty) {
+      for (final item in initial) {
+        rows.add(_DebtRow(title: item.description,
+          quantity: item.qty, unitPrice: item.unitPrice));
+      }
+    } else if (existing != null) {
+      // Piutang lama tanpa tabel rincian ditampilkan sebagai satu baris.
+      rows.add(_DebtRow(title: existing.description, unitPrice: existing.amount));
+    } else {
+      rows.add(_DebtRow());
+    }
+  }
 
   @override
   void dispose() {
-    for (final c in [customer, phone, description, amount, notes]) { c.dispose(); }
+    for (final c in [customer, phone, description, notes]) { c.dispose(); }
+    for (final row in rows) { row.dispose(); }
     super.dispose();
+  }
+
+  int get subtotal {
+    var total = 0;
+    for (final line in rows) {
+      final q = nonNegative(line.qty.text) ?? 0;
+      final price = nonNegative(line.price.text) ?? 0;
+      total += q * price;
+    }
+    return total;
   }
 
   Future<void> chooseCustomer() async {
     final db = await AppDatabase.instance;
-    final rows = await db.query('customers', orderBy: 'name ASC', limit: 300);
+    final result = await db.query('customers', orderBy: 'name ASC', limit: 300);
     if (!mounted) return;
     final choice = await showModalBottomSheet<Map<String, Object?>>(
-      context: context, isScrollControlled: true, showDragHandle: true,
-      builder: (sheetContext) => SafeArea(child: SizedBox(height: 390,
+      context: context, showDragHandle: true, isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(child: SizedBox(height: 440,
         child: ListView(children: [
-          const ListTile(title: Text('Pilih pelanggan tersimpan', style: TextStyle(fontWeight: FontWeight.w900))),
-          if (rows.isEmpty) const ListTile(title: Text('Belum ada pelanggan tersimpan')),
-          for (final row in rows) ListTile(title: Text('${row['name']}'),
-            subtitle: Text('${row['phone']}'),
+          const ListTile(title: Text('Pelanggan Tersimpan',
+            style: TextStyle(fontWeight: FontWeight.w900))),
+          if (result.isEmpty) const ListTile(title: Text('Belum ada pelanggan')),
+          for (final row in result) ListTile(
+            title: Text('${row['name']}'), subtitle: Text('${row['phone']}'),
             onTap: () => Navigator.pop(sheetContext, row)),
         ]))));
-    if (choice == null || !mounted) return;
+    if (!mounted || choice == null) return;
+    setState(() { customer.text = '${choice['name']}'; phone.text = '${choice['phone']}'; });
+  }
+
+  Future<void> chooseContact() async {
+    final selected = await Navigator.of(context).push<ContactChoice>(
+      MaterialPageRoute(builder: (_) => const ContactPickerScreen()));
+    if (!mounted || selected == null) return;
     setState(() {
-      customer.text = '${choice['name']}';
-      phone.text = '${choice['phone']}';
+      customer.text = selected.name;
+      phone.text = selected.number.replaceAll(RegExp(r'[^0-9+]'), '');
     });
   }
 
   Future<void> chooseDue() async {
     final result = await showDatePicker(context: context, initialDate: due,
       firstDate: DateTime(2020), lastDate: DateTime(2100),
-      helpText: 'Pilih tanggal jatuh tempo');
+      helpText: 'Tanggal jatuh tempo piutang');
     if (result != null && mounted) setState(() => due = result);
   }
 
+  List<ReceivableLine> collectItems() => [
+    for (final row in rows) ReceivableLine(
+      description: row.label.text.trim(),
+      qty: nonNegative(row.qty.text) ?? 0,
+      unitPrice: nonNegative(row.price.text) ?? -1,
+    ),
+  ];
+
   Future<void> save() async {
-    if (!(form.currentState?.validate() ?? false) || saving) return;
+    if (saving || !(form.currentState?.validate() ?? false)) return;
+    late final List<ReceivableLine> items;
+    try {
+      items = collectItems();
+      ReceivablesService.calculateTotal(items);
+    } catch (e) { notify(context, '$e'); return; }
     setState(() => saving = true);
     try {
-      await ReceivablesService.create(customer: customer.text, phone: phone.text,
-        description: description.text, amount: nonNegative(amount.text)!,
-        dueDate: due, notes: notes.text);
+      final summary = description.text.trim().isNotEmpty
+          ? description.text.trim()
+          : items.map((e) => e.description).join(', ');
+      if (editing) {
+        await ReceivablesService.editDetailed(
+          receivableId: widget.existing!.id, customer: customer.text,
+          phone: phone.text, description: summary, notes: notes.text,
+          dueDate: due, lines: items);
+      } else {
+        await ReceivablesService.createDetailed(
+          customer: customer.text, phone: phone.text,
+          description: summary, notes: notes.text, dueDate: due, lines: items);
+      }
       if (mounted) Navigator.pop(context, true);
-    } catch (e) { if (mounted) notify(context, 'Gagal menyimpan piutang: $e'); }
-    finally { if (mounted) setState(() => saving = false); }
+    } catch (e) {
+      if (mounted) notify(context, 'Tidak bisa menyimpan piutang: $e');
+    } finally { if (mounted) setState(() => saving = false); }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Catat Piutang Baru')),
-    body: Form(key: form, child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 30), children: [
-      const PageIntro('Piutang pelanggan', 'Catat siapa yang berutang, jumlah dan batas pembayarannya'),
-      Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const SectionTitle('Informasi pelanggan'),
-        OutlinedButton.icon(onPressed: chooseCustomer,
-          icon: const Icon(Icons.person_search_rounded), label: const Text('Pilih Pelanggan Tersimpan')),
+    appBar: AppBar(title: Text(editing ? 'Edit Detail Piutang' : 'Catat Piutang Baru')),
+    body: Form(key: form, child: ListView(
+      key: const PageStorageKey('receivable-editor'),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+      children: [
+        PageIntro(editing ? 'Perbarui catatan' : 'Piutang pelanggan',
+          'Pisahkan setiap barang atau jasa agar jumlah tagihan jelas.'),
+        Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const SectionTitle('Informasi pelanggan'),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            OutlinedButton.icon(onPressed: chooseCustomer,
+              icon: const Icon(Icons.people_alt_outlined), label: const Text('Pelanggan Tersimpan')),
+            OutlinedButton.icon(onPressed: chooseContact,
+              icon: const Icon(Icons.contact_phone_outlined), label: const Text('Cari di Kontak HP')),
+          ]),
+          const SizedBox(height: 14),
+          TextFormField(controller: customer,
+            decoration: inputDecoration('Nama pelanggan *', icon: Icons.person_outline),
+            validator: (v) => v == null || v.trim().isEmpty ? 'Nama wajib diisi' : null),
+          const SizedBox(height: 12),
+          TextFormField(controller: phone, keyboardType: TextInputType.phone,
+            decoration: inputDecoration('Nomor HP / WhatsApp', icon: Icons.phone_outlined)),
+          const SizedBox(height: 5),
+          Text('Izin kontak hanya diminta saat tombol Cari di Kontak HP ditekan.',
+            style: TextStyle(fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        ])),
         const SizedBox(height: 13),
-        TextFormField(controller: customer, decoration: inputDecoration('Nama pelanggan *'),
-          validator: (v) => v == null || v.trim().isEmpty ? 'Wajib diisi' : null),
-        const SizedBox(height: 12),
-        TextFormField(controller: phone, keyboardType: TextInputType.phone,
-          decoration: inputDecoration('Nomor WhatsApp / HP')),
-      ])),
-      const SizedBox(height: 12),
-      Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const SectionTitle('Informasi tagihan'),
-        TextFormField(controller: description, decoration: inputDecoration('Keterangan *', hint: 'Contoh: Beli charger & aksesoris'),
-          validator: (v) => v == null || v.trim().isEmpty ? 'Wajib diisi' : null),
-        const SizedBox(height: 12),
-        TextFormField(controller: amount, keyboardType: TextInputType.number,
-          decoration: inputDecoration('Nominal piutang (Rp) *'),
-          validator: (v) { final n = nonNegative(v ?? ''); return n == null || n <= 0 || n > 1000000000 ? 'Masukkan Rp1 – Rp1 miliar' : null; }),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(onPressed: chooseDue, icon: const Icon(Icons.event_rounded),
-          label: Text('Jatuh tempo: ${dateLabel(due.toIso8601String())}')),
-        const SizedBox(height: 12),
-        TextFormField(controller: notes, maxLines: 2, decoration: inputDecoration('Catatan tambahan (opsional)')),
-      ])),
-      const SizedBox(height: 20),
-      FilledButton.icon(onPressed: saving ? null : save,
-        icon: const Icon(Icons.save_rounded), label: Text(saving ? 'Menyimpan...' : 'Simpan Piutang')),
-      const SizedBox(height: 14),
-      const Text('Piutang tidak menambah saldo kas sebelum pembayaran dicatat.',
-        textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
-    ])),
+        Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            const Expanded(child: SectionTitle('Rincian barang & harga')),
+            Text('${rows.length}/30', style: TextStyle(
+              fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ]),
+          for (var i = 0; i < rows.length; i++) ...[
+            _itemFields(i, rows[i]),
+            const SizedBox(height: 10),
+          ],
+          OutlinedButton.icon(onPressed: rows.length >= 30 ? null : () =>
+            setState(() => rows.add(_DebtRow())),
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Tambah Baris Barang / Jasa')),
+          const Divider(height: 26),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text('TOTAL PIUTANG', style: TextStyle(fontWeight: FontWeight.w900)),
+            Flexible(child: Text(rupiah(subtotal), textAlign: TextAlign.right,
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900,
+                color: Theme.of(context).colorScheme.primary))),
+          ]),
+          if (editing) Padding(padding: const EdgeInsets.only(top: 8),
+            child: Text('Sudah dibayar ${rupiah(widget.existing!.paid)} • '
+              'total baru tidak boleh kurang dari cicilan.',
+              style: TextStyle(fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurfaceVariant))),
+        ])),
+        const SizedBox(height: 13),
+        Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const SectionTitle('Jadwal & catatan'),
+          TextFormField(controller: description,
+            decoration: inputDecoration('Ringkasan tagihan (opsional)',
+              hint: 'Otomatis memakai daftar barang jika kosong')),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(onPressed: chooseDue,
+            icon: const Icon(Icons.event_available_outlined),
+            label: Text('Jatuh tempo: ${dateLabel(due.toIso8601String())}')),
+          const SizedBox(height: 12),
+          TextFormField(controller: notes, maxLines: 2,
+            decoration: inputDecoration('Catatan tambahan (opsional)')),
+        ])),
+        const SizedBox(height: 20),
+        FilledButton.icon(onPressed: saving ? null : save,
+          icon: const Icon(Icons.save_outlined),
+          label: Text(saving ? 'Menyimpan...' : editing ? 'Simpan Perubahan' : 'Simpan Piutang')),
+        const SizedBox(height: 10),
+        const Text('Piutang tidak menambah saldo kas sampai cicilan dicatat.',
+          style: TextStyle(fontSize: 12), textAlign: TextAlign.center),
+      ],
+    )),
+  );
+
+  Widget _itemFields(int index, _DebtRow row) => Container(
+    padding: const EdgeInsets.all(13),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.primary.withValues(alpha: .045),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        Expanded(child: Text('Item ${index + 1}',
+          style: const TextStyle(fontWeight: FontWeight.w800))),
+        if (rows.length > 1) IconButton(
+          tooltip: 'Hapus item', icon: const Icon(Icons.remove_circle_outline),
+          onPressed: () => setState(() { rows.removeAt(index); row.dispose(); })),
+      ]),
+      TextFormField(controller: row.label,
+        decoration: inputDecoration('Nama barang / jasa *'),
+        validator: (v) => v == null || v.trim().isEmpty ? 'Nama item wajib diisi' : null),
+      const SizedBox(height: 11),
+      Row(children: [
+        Expanded(flex: 2, child: TextFormField(controller: row.qty,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: inputDecoration('Jumlah *'),
+          onChanged: (_) => setState(() {}),
+          validator: (v) { final value = nonNegative(v ?? '');
+            return value == null || value <= 0 || value > 10000 ? '1–10.000' : null; },
+        )),
+        const SizedBox(width: 10),
+        Expanded(flex: 3, child: TextFormField(controller: row.price,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: inputDecoration('Harga satuan (Rp) *'),
+          onChanged: (_) => setState(() {}),
+          validator: (v) { final value = nonNegative(v ?? '');
+            return value == null || value > 1000000000 ? 'Harga tidak valid' : null; },
+        )),
+      ]),
+      const SizedBox(height: 10),
+      Align(alignment: Alignment.centerRight,
+        child: Text('Subtotal: ${rupiah((nonNegative(row.qty.text) ?? 0) * (nonNegative(row.price.text) ?? 0))}',
+          style: const TextStyle(fontWeight: FontWeight.w800))),
+    ]),
   );
 }
 
@@ -268,11 +444,13 @@ class ReceivableDetailScreen extends StatefulWidget {
 class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
   late Future<List<Receivable>> loader;
   late Future<List<Map<String, Object?>>> payments;
+  late Future<List<ReceivableLine>> items;
   @override
   void initState() { super.initState(); refresh(); }
   void refresh() => setState(() {
     loader = ReceivablesService.all();
     payments = ReceivablesService.payments(widget.id);
+    items = ReceivablesService.lines(widget.id);
   });
 
   Future<void> recordPayment(Receivable item) async {
@@ -325,6 +503,68 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
     if (mounted) refresh();
   }
 
+  Future<void> editDetails(Receivable item) async {
+    try {
+      final currentItems = await ReceivablesService.lines(item.id);
+      if (!mounted) return;
+      final changed = await Navigator.of(context).push<bool>(MaterialPageRoute(
+        builder: (_) => CreateReceivableScreen(
+          existing: item, initialItems: currentItems)));
+      if (changed == true && mounted) {
+        refresh();
+        notify(context, 'Detail piutang berhasil diperbarui');
+      }
+    } catch (e) {
+      if (mounted) notify(context, 'Tidak dapat membuka editor: $e');
+    }
+  }
+
+  Future<void> sendWhatsApp(Receivable item) async {
+    final destination = whatsappPhone(item.phone);
+    if (destination == null) {
+      notify(context, 'Nomor WhatsApp belum valid. Tambahkan melalui Edit Detail.');
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final message = item.isPaid
+      ? 'Halo ${item.customer}, pembayaran untuk ${item.description} di AGAN PONSEL sudah lunas. Terima kasih 🙏'
+      : reminderText(item, prefs.getString('reminder_message_template') ?? 'Ramah');
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(context: context, builder: (ctx) =>
+      AlertDialog(
+        title: const Text('Kirim Pengingat ke WhatsApp'),
+        content: SingleChildScrollView(child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tujuan: ${item.customer} • ${item.phone}'),
+            const SizedBox(height: 13),
+            Text(message),
+            const SizedBox(height: 13),
+            const Text('WhatsApp akan dibuka dengan teks terisi. '
+              'Pesan baru terkirim setelah kamu menekan Kirim di WhatsApp.',
+              style: TextStyle(fontSize: 12)),
+          ],
+        )),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Buka WhatsApp')),
+        ],
+      ));
+    if (confirmed != true || !mounted) return;
+    final uri = Uri.https('wa.me', '/$destination', {'text': message});
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        notify(context, 'WhatsApp tidak dapat dibuka. Coba salin pesan.');
+      }
+    } catch (e) {
+      if (mounted) notify(context, 'Gagal membuka WhatsApp: $e');
+    }
+  }
+
   Future<void> copyReminder(Receivable item) async {
     final prefs = await SharedPreferences.getInstance();
     final style = prefs.getString('reminder_message_template') ?? 'Ramah';
@@ -346,7 +586,8 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
       final item = rows.first;
       final progress = item.amount == 0 ? 0.0 : item.paid / item.amount;
       final color = item.overdue ? const Color(0xFFE05C54) : const Color(0xFF0879DC);
-      return ListView(padding: const EdgeInsets.all(16), children: [
+      return ListView(key: const PageStorageKey('receivable-detail-scroll'),
+        padding: const EdgeInsets.all(16), children: [
         Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(item.customer, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 4),
@@ -367,6 +608,41 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
           Text('Tanggal: ${dateLabel(item.dueDate)}', style: const TextStyle(fontSize: 12)),
           if (item.notes.isNotEmpty) Text('Catatan: ${item.notes}'),
         ])),
+        const SizedBox(height: 13),
+        Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SectionTitle('Rincian Barang & Jasa'),
+          FutureBuilder<List<ReceivableLine>>(future: items, builder: (ctx, details) {
+            if (!details.hasData) return const ScreenLoading();
+            if (details.data!.isEmpty) return const Text('Piutang versi lama. '
+              'Tekan Edit Detail untuk mencatat rincian barang dan harga.');
+            return Column(children: [
+              for (final line in details.data!) Padding(
+                padding: const EdgeInsets.only(bottom: 11),
+                child: Row(children: [
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(line.description, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      Text('${line.qty} × ${rupiah(line.unitPrice)}',
+                        style: TextStyle(fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    ])),
+                  Text(rupiah(line.total),
+                    style: const TextStyle(fontWeight: FontWeight.w800)),
+                ])),
+              const Divider(),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [const Text('Total Barang', style: TextStyle(fontWeight: FontWeight.w800)),
+                  Text(rupiah(item.amount),
+                    style: const TextStyle(fontWeight: FontWeight.w900))]),
+            ]);
+          }),
+        ])),
+        const SizedBox(height: 13),
+        FilledButton.tonalIcon(onPressed: () => editDetails(item),
+          icon: const Icon(Icons.edit_note_rounded), label: const Text('Edit Detail Piutang')),
+        const SizedBox(height: 9),
+        OutlinedButton.icon(onPressed: () => sendWhatsApp(item),
+          icon: const Icon(Icons.send_rounded), label: const Text('Kirim ke WhatsApp')),
         const SizedBox(height: 13),
         if (!item.isPaid) ...[
           FilledButton.icon(onPressed: () => recordPayment(item),
@@ -435,7 +711,8 @@ class _ReminderCenterScreenState extends State<ReminderCenterScreen> {
       if (!snap.hasData) return const ScreenLoading();
       final alerts = snap.data!.where((r) => r.overdue || r.dueSoon).toList()
         ..sort((a, b) => a.daysLeft.compareTo(b.daysLeft));
-      return ListView(padding: const EdgeInsets.all(16), children: [
+      return ListView(key: const PageStorageKey('reminder-center-scroll'),
+        padding: const EdgeInsets.all(16), children: [
         const PageIntro('Tagihan & jatuh tempo',
           'Daftar otomatis diperbarui berdasarkan tanggal saat kamu membuka aplikasi.'),
         if (alerts.isEmpty) const EmptyView(icon: Icons.verified_rounded,

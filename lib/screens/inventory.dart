@@ -66,7 +66,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         (category == 'Semua' || p.category == category) &&
         '${p.name} ${p.sku}'.toLowerCase().contains(search.toLowerCase())).toList();
       return RefreshIndicator(onRefresh: () async { reload(); await loader; },
-        child: ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 85), children: [
+        child: ListView(key: const PageStorageKey('inventory-scroll'), padding: const EdgeInsets.fromLTRB(16, 20, 16, 85), children: [
           PageIntro(widget.lowOnly ? 'Stok Menipis' : 'Produk & Stok',
             'Kelola stok, kategori, modal dan harga jual'),
           Row(children: [
