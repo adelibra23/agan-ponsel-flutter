@@ -165,9 +165,12 @@ class _DebtRow {
   final TextEditingController label;
   final TextEditingController qty;
   final TextEditingController price;
+  DateTime date;
 
-  _DebtRow({String title = '', int quantity = 1, int unitPrice = 0})
-      : label = TextEditingController(text: title),
+  _DebtRow({String title = '', int quantity = 1, int unitPrice = 0,
+      String dateString = ''})
+      : date = DateTime.tryParse(dateString) ?? DateTime.now(),
+        label = TextEditingController(text: title),
         qty = TextEditingController(text: '$quantity'),
         price = TextEditingController(text: unitPrice == 0 ? '' : '$unitPrice');
 
@@ -179,7 +182,11 @@ class _DebtRow {
 class CreateReceivableScreen extends StatefulWidget {
   final Receivable? existing;
   final List<ReceivableLine>? initialItems;
-  const CreateReceivableScreen({super.key, this.existing, this.initialItems});
+  final int? appendToId;
+  final String? appendToCustomer;
+  final String? appendDueDate;
+  const CreateReceivableScreen({super.key, this.existing, this.initialItems,
+    this.appendToId, this.appendToCustomer, this.appendDueDate});
 
   @override
   State<CreateReceivableScreen> createState() => _CreateReceivableScreenState();
@@ -195,23 +202,24 @@ class _CreateReceivableScreenState extends State<CreateReceivableScreen> {
   final List<_DebtRow> rows = [];
   bool saving = false;
   bool get editing => widget.existing != null;
+  bool get appending => widget.appendToId != null;
 
   @override
   void initState() {
     super.initState();
     final existing = widget.existing;
-    customer = TextEditingController(text: existing?.customer ?? '');
+    customer = TextEditingController(text: existing?.customer ?? widget.appendToCustomer ?? '');
     phone = TextEditingController(text: existing?.phone ?? '');
     description = TextEditingController(text: existing?.description ?? '');
     notes = TextEditingController(text: existing?.notes ?? '');
-    due = existing == null
-        ? DateTime.now().add(const Duration(days: 7))
-        : DateTime.parse(existing.dueDate);
+    due = existing != null ? DateTime.parse(existing.dueDate)
+      : widget.appendDueDate != null ? DateTime.parse(widget.appendDueDate!)
+      : DateTime.now().add(const Duration(days: 7));
     final initial = widget.initialItems ?? const <ReceivableLine>[];
     if (initial.isNotEmpty) {
       for (final item in initial) {
         rows.add(_DebtRow(title: item.description,
-          quantity: item.qty, unitPrice: item.unitPrice));
+          quantity: item.qty, unitPrice: item.unitPrice, dateString: item.entryDate));
       }
     } else if (existing != null) {
       // Piutang lama tanpa tabel rincian ditampilkan sebagai satu baris.
@@ -274,11 +282,19 @@ class _CreateReceivableScreenState extends State<CreateReceivableScreen> {
     if (result != null && mounted) setState(() => due = result);
   }
 
+  Future<void> chooseRowDate(_DebtRow row) async {
+    final date = await showDatePicker(context: context, initialDate: row.date,
+      firstDate: DateTime(2020), lastDate: DateTime(2100),
+      helpText: 'Tanggal barang / bon');
+    if (date != null && mounted) setState(() => row.date = date);
+  }
+
   List<ReceivableLine> collectItems() => [
     for (final row in rows) ReceivableLine(
       description: row.label.text.trim(),
       qty: nonNegative(row.qty.text) ?? 0,
       unitPrice: nonNegative(row.price.text) ?? -1,
+      entryDate: row.date.toIso8601String().substring(0, 10),
     ),
   ];
 
@@ -294,7 +310,10 @@ class _CreateReceivableScreenState extends State<CreateReceivableScreen> {
       final summary = description.text.trim().isNotEmpty
           ? description.text.trim()
           : items.map((e) => e.description).join(', ');
-      if (editing) {
+      if (appending) {
+        await ReceivablesService.appendBon(receivableId: widget.appendToId!,
+          lines: items, dueDate: due);
+      } else if (editing) {
         await ReceivablesService.editDetailed(
           receivableId: widget.existing!.id, customer: customer.text,
           phone: phone.text, description: summary, notes: notes.text,
@@ -312,13 +331,23 @@ class _CreateReceivableScreenState extends State<CreateReceivableScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(editing ? 'Edit Detail Piutang' : 'Catat Piutang Baru')),
+    appBar: AppBar(title: Text(appending ? 'Tambah Bon Pelanggan' : editing ? 'Edit Detail Piutang' : 'Catat Piutang Baru')),
     body: Form(key: form, child: ListView(
       key: const PageStorageKey('receivable-editor'),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
       children: [
-        PageIntro(editing ? 'Perbarui catatan' : 'Piutang pelanggan',
-          'Pisahkan setiap barang atau jasa agar jumlah tagihan jelas.'),
+        PageIntro(appending ? 'Bon tambahan' : editing ? 'Perbarui catatan' : 'Piutang pelanggan',
+          appending ? 'Barang baru ditambahkan ke piutang pelanggan yang sama, tanpa menghapus pembayaran lama.'
+            : 'Pisahkan setiap barang atau jasa agar jumlah tagihan jelas.'),
+        if (appending) ...[
+          Surface(child: ListTile(
+            leading: const Icon(Icons.person_outline_rounded),
+            title: Text(customer.text, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: const Text('Pelanggan pada piutang yang sama'),
+          )),
+          const SizedBox(height: 13),
+        ],
+        if (!appending)
         Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const SectionTitle('Informasi pelanggan'),
           Wrap(spacing: 8, runSpacing: 8, children: [
@@ -343,14 +372,14 @@ class _CreateReceivableScreenState extends State<CreateReceivableScreen> {
         Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             const Expanded(child: SectionTitle('Rincian barang & harga')),
-            Text('${rows.length}/30', style: TextStyle(
+            Text('${rows.length}/200', style: TextStyle(
               fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ]),
           for (var i = 0; i < rows.length; i++) ...[
             _itemFields(i, rows[i]),
             const SizedBox(height: 10),
           ],
-          OutlinedButton.icon(onPressed: rows.length >= 30 ? null : () =>
+          OutlinedButton.icon(onPressed: rows.length >= 200 ? null : () =>
             setState(() => rows.add(_DebtRow())),
             icon: const Icon(Icons.add_circle_outline),
             label: const Text('Tambah Baris Barang / Jasa')),
@@ -369,22 +398,24 @@ class _CreateReceivableScreenState extends State<CreateReceivableScreen> {
         ])),
         const SizedBox(height: 13),
         Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const SectionTitle('Jadwal & catatan'),
-          TextFormField(controller: description,
-            decoration: inputDecoration('Ringkasan tagihan (opsional)',
-              hint: 'Otomatis memakai daftar barang jika kosong')),
-          const SizedBox(height: 12),
+          SectionTitle(appending ? 'Jatuh tempo setelah bon tambahan' : 'Jadwal & catatan'),
+          if (!appending) ...[
+            TextFormField(controller: description,
+              decoration: inputDecoration('Ringkasan tagihan (opsional)',
+                hint: 'Otomatis memakai daftar barang jika kosong')),
+            const SizedBox(height: 12),
+          ],
           OutlinedButton.icon(onPressed: chooseDue,
             icon: const Icon(Icons.event_available_outlined),
             label: Text('Jatuh tempo: ${dateLabel(due.toIso8601String())}')),
           const SizedBox(height: 12),
-          TextFormField(controller: notes, maxLines: 2,
+          if (!appending) TextFormField(controller: notes, maxLines: 2,
             decoration: inputDecoration('Catatan tambahan (opsional)')),
         ])),
         const SizedBox(height: 20),
         FilledButton.icon(onPressed: saving ? null : save,
           icon: const Icon(Icons.save_outlined),
-          label: Text(saving ? 'Menyimpan...' : editing ? 'Simpan Perubahan' : 'Simpan Piutang')),
+          label: Text(saving ? 'Menyimpan...' : appending ? 'Tambahkan Bon' : editing ? 'Simpan Perubahan' : 'Simpan Piutang')),
         const SizedBox(height: 10),
         const Text('Piutang tidak menambah saldo kas sampai cicilan dicatat.',
           style: TextStyle(fontSize: 12), textAlign: TextAlign.center),
@@ -406,6 +437,10 @@ class _CreateReceivableScreenState extends State<CreateReceivableScreen> {
           tooltip: 'Hapus item', icon: const Icon(Icons.remove_circle_outline),
           onPressed: () => setState(() { rows.removeAt(index); row.dispose(); })),
       ]),
+      OutlinedButton.icon(onPressed: () => chooseRowDate(row),
+        icon: const Icon(Icons.calendar_today_outlined, size: 17),
+        label: Text('Tanggal bon: ${dateLabel(row.date.toIso8601String())}')),
+      const SizedBox(height: 9),
       TextFormField(controller: row.label,
         decoration: inputDecoration('Nama barang / jasa *'),
         validator: (v) => v == null || v.trim().isEmpty ? 'Nama item wajib diisi' : null),
@@ -449,6 +484,8 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
   late Future<List<Map<String, Object?>>> payments;
   late Future<List<ReceivableLine>> items;
   late Future<List<Map<String, Object?>>> receiptEvents;
+  late Future<List<Map<String, Object?>>> correctionEvents;
+  late Future<List<Map<String, Object?>>> bonEvents;
   bool printingDebt = false;
   @override
   void initState() { super.initState(); refresh(); }
@@ -457,6 +494,8 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
     payments = ReceivablesService.payments(widget.id);
     items = ReceivablesService.lines(widget.id);
     receiptEvents = ReceivableReceiptService.history(widget.id);
+    correctionEvents = ReceivablesService.paymentEdits(widget.id);
+    bonEvents = ReceivablesService.bonEvents(widget.id);
   });
 
   Future<void> openDigitalReceipt(Receivable item) async {
@@ -523,6 +562,113 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
         amount: result.$1, method: result.$2, note: result.$3);
       if (mounted) { refresh(); notify(context, 'Pembayaran tercatat'); }
     } catch (e) { if (mounted) notify(context, 'Gagal: $e'); }
+  }
+
+  Future<void> addBon(Receivable item) async {
+    final updated = await Navigator.of(context).push<bool>(MaterialPageRoute(
+      builder: (_) => CreateReceivableScreen(
+        appendToId: item.id, appendToCustomer: item.customer,
+        appendDueDate: item.dueDate)));
+    if (updated == true && mounted) {
+      refresh();
+      notify(context, 'Bon tambahan berhasil dicatat');
+    }
+  }
+
+  Future<void> correctPayment(Receivable debt, Map<String, Object?> payment) async {
+    final amount = TextEditingController(text: '${payment['amount']}');
+    final note = TextEditingController(text: '${payment['note'] ?? ''}');
+    final reason = TextEditingController();
+    var method = '${payment['method']}';
+    var date = DateTime.parse('${payment['paid_at']}');
+    final result = await showAppSheet<(int, String, String, DateTime, String)>(context,
+      StatefulBuilder(builder: (ctx, update) => Column(
+        mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Koreksi Pembayaran', style: Theme.of(ctx).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          const Text('Riwayat lama disimpan di log koreksi. Perubahan nominal langsung memengaruhi sisa piutang.'),
+          const SizedBox(height: 14),
+          TextField(controller: amount, keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: inputDecoration('Nominal pembayaran (Rp)')),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(initialValue: method,
+            decoration: inputDecoration('Metode pembayaran'),
+            items: const ['Tunai', 'Transfer', 'E-Wallet'].map((v) =>
+              DropdownMenuItem(value: v, child: Text(v))).toList(),
+            onChanged: (v) { if (v != null) update(() => method = v); }),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(onPressed: () async {
+            final selected = await showDatePicker(context: ctx,
+              initialDate: date, firstDate: DateTime(2020), lastDate: DateTime.now());
+            if (selected != null) update(() => date = DateTime(
+              selected.year, selected.month, selected.day,
+              date.hour, date.minute, date.second, date.millisecond, date.microsecond));
+          }, icon: const Icon(Icons.calendar_month_outlined),
+            label: Text('Tanggal bayar: ${dateLabel(date.toIso8601String())}')),
+          const SizedBox(height: 10),
+          TextField(controller: note, maxLength: 500,
+            decoration: inputDecoration('Catatan pembayaran')),
+          const SizedBox(height: 10),
+          TextField(controller: reason, maxLength: 300,
+            decoration: inputDecoration('Alasan koreksi *', hint: 'Contoh: nominal salah ketik')),
+          const SizedBox(height: 12),
+          FilledButton.icon(onPressed: () {
+            final n = nonNegative(amount.text);
+            if (n == null || n <= 0) {
+              notify(ctx, 'Nominal harus lebih dari Rp0'); return;
+            }
+            if (reason.text.trim().length < 5) {
+              notify(ctx, 'Alasan koreksi minimal 5 karakter'); return;
+            }
+            Navigator.pop(ctx, (n, method, note.text, date, reason.text.trim()));
+          }, icon: const Icon(Icons.fact_check_outlined),
+            label: const Text('Tinjau Koreksi')),
+        ],
+      )));
+    amount.dispose(); note.dispose(); reason.dispose();
+    if (!mounted || result == null) return;
+    final approved = await showDialog<bool>(context: context, builder: (ctx) =>
+      AlertDialog(title: const Text('Konfirmasi Koreksi'),
+        content: Text('Pembayaran ${rupiah(payment['amount'] as int)} menjadi '
+          '${rupiah(result.$1)}.\n\nAlasan: ${result.$5}\n\n'
+          'Riwayat koreksi akan disimpan dan tidak dapat dihapus dari halaman ini.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Simpan Koreksi')),
+        ]));
+    if (approved != true || !mounted) return;
+    try {
+      await ReceivablesService.editPayment(
+        receivableId: debt.id, paymentId: payment['id'] as int,
+        amount: result.$1, method: result.$2, note: result.$3,
+        paidAt: result.$4, reason: result.$5);
+      if (mounted) { refresh(); notify(context, 'Pembayaran berhasil dikoreksi'); }
+    } catch (e) { if (mounted) notify(context, 'Gagal koreksi pembayaran: $e'); }
+  }
+
+  Future<void> copyStatement(Receivable item) async {
+    try {
+      final receipt = await ReceivableReceiptService.load(item.id);
+      final summary = StringBuffer()
+        ..writeln('RINGKASAN PIUTANG • ${receipt.number}')
+        ..writeln('Pelanggan: ${item.customer}')
+        ..writeln('Jatuh tempo: ${dateLabel(item.dueDate)}')
+        ..writeln('--- RINCIAN BON ---');
+      for (final line in receipt.lines) {
+        summary.writeln('${line.entryDate.isEmpty ? dateLabel(item.createdAt) : dateLabel(line.entryDate)} • '
+          '${line.description} (${line.qty} × ${rupiah(line.unitPrice)}) = ${rupiah(line.total)}');
+      }
+      summary..writeln('---')
+        ..writeln('Total tagihan: ${rupiah(item.amount)}')
+        ..writeln('Sudah dibayar: ${rupiah(item.paid)}')
+        ..writeln('Sisa: ${rupiah(item.remaining)}');
+      await Clipboard.setData(ClipboardData(text: summary.toString()));
+      if (mounted) notify(context, 'Ringkasan piutang disalin');
+    } catch (e) { if (mounted) notify(context, 'Gagal menyalin ringkasan: $e'); }
   }
 
   Future<void> changeDate(Receivable item) async {
@@ -653,6 +799,9 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(line.description, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      Text('Tanggal bon: ${line.entryDate.isEmpty ? dateLabel(item.createdAt) : dateLabel(line.entryDate)}',
+                        style: TextStyle(fontSize: 11,
+                          color: Theme.of(context).colorScheme.primary)),
                       Text('${line.qty} × ${rupiah(line.unitPrice)}',
                         style: TextStyle(fontSize: 12,
                           color: Theme.of(context).colorScheme.onSurfaceVariant)),
@@ -669,6 +818,14 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
           }),
         ])),
         const SizedBox(height: 13),
+        FilledButton.icon(onPressed: () => addBon(item),
+          icon: const Icon(Icons.add_shopping_cart_rounded),
+          label: const Text('Tambah Bon pada Pelanggan Ini')),
+        const SizedBox(height: 9),
+        OutlinedButton.icon(onPressed: () => copyStatement(item),
+          icon: const Icon(Icons.content_copy_outlined),
+          label: const Text('Salin Ringkasan Piutang')),
+        const SizedBox(height: 9),
         FilledButton.tonalIcon(onPressed: () => editDetails(item),
           icon: const Icon(Icons.edit_note_rounded), label: const Text('Edit Detail Piutang')),
         const SizedBox(height: 9),
@@ -718,6 +875,20 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
           )]);
         }),
         const SizedBox(height: 18),
+        const SectionTitle('Riwayat Bon Tambahan'),
+        FutureBuilder<List<Map<String, Object?>>>(future: bonEvents, builder: (ctx, snap) {
+          if (!snap.hasData) return const ScreenLoading();
+          if (snap.data!.isEmpty) return const Text('Belum ada bon tambahan.');
+          return Column(children: [for (final event in snap.data!) Surface(
+            child: ListTile(
+              leading: const Icon(Icons.post_add_rounded),
+              title: Text('Bon +${rupiah(event['amount'] as int)}'),
+              subtitle: Text('${event['item_count']} barang/jasa • '
+                '${dateLabel('${event['created_at']}')}'),
+            ),
+          )]);
+        }),
+        const SizedBox(height: 18),
         const SectionTitle('Riwayat Pembayaran'),
         FutureBuilder<List<Map<String, Object?>>>(future: payments, builder: (ctx, p) {
           if (!p.hasData) return const ScreenLoading();
@@ -727,9 +898,32 @@ class _ReceivableDetailScreenState extends State<ReceivableDetailScreen> {
               leading: const Icon(Icons.check_circle_rounded, color: Color(0xFF0CA474)),
               title: Text(rupiah(payment['amount'] as int), style: const TextStyle(fontWeight: FontWeight.w800)),
               subtitle: Text('${dateLabel(payment['paid_at'] as String)} • ${payment['method']}\n${payment['note']}',
-                maxLines: 2), isThreeLine: true)),
+                maxLines: 2), isThreeLine: true,
+              trailing: IconButton(tooltip: 'Koreksi pembayaran',
+                icon: const Icon(Icons.edit_note_rounded),
+                onPressed: () => correctPayment(item, payment)))),
             const SizedBox(height: 8),
           ]]);
+        }),
+        const SizedBox(height: 18),
+        const SectionTitle('Jejak Koreksi Pembayaran'),
+        FutureBuilder<List<Map<String, Object?>>>(future: correctionEvents, builder: (ctx, snap) {
+          if (!snap.hasData) return const ScreenLoading();
+          if (snap.data!.isEmpty) return const Text('Belum ada pembayaran yang dikoreksi.');
+          return Column(children: [for (final event in snap.data!) Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Surface(child: ListTile(
+              leading: const Icon(Icons.manage_history_rounded),
+              title: Text('${rupiah(event['old_amount'] as int)} → '
+                '${rupiah(event['new_amount'] as int)}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('${event['old_method']} → ${event['new_method']}\n'
+                'Tanggal: ${dateLabel('${event['old_paid_at']}')} → ${dateLabel('${event['new_paid_at']}')}\n'
+                'Alasan: ${event['reason']}\n'
+                '${dateLabel('${event['edited_at']}')} ${timeLabel('${event['edited_at']}')}',
+                maxLines: 5),
+            )),
+          )]);
         }),
       ]);
     }),

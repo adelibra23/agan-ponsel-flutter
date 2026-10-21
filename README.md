@@ -34,3 +34,11 @@ Konteks chat antar pesan disimpan di **server**, sedangkan transaksi/Piutang/Ser
 - Struktur source/diff dan file ZIP diuji statis.
 - **Compiler Flutter tidak tersedia di lingkungan penyusunan paket; APK belum diuji.** GitHub Actions akan mengecek kompilasi dan tests.
 - Tidak ada login/perangkat WhatsApp Meta yang sudah tersambung; butuh konfigurasi pengguna untuk mengaktifkan live bot.
+
+
+## AGAN PONSEL v1.2.0 Build22
+- Koreksi pembayaran dengan alasan dan jejak audit sebelum/sesudah.
+- Tanggal per barang/bon dan tombol Tambah Bon ke piutang pelanggan yang sama.
+- Penyesuaian tanggal jatuh tempo, salin ringkasan piutang, aktivitas bon tambahan.
+- Migrasi SQLite v11 dan kompatibilitas backup v4..v11.
+- Build21 WhatsApp dan plugin preferences override tetap dipertahankan.

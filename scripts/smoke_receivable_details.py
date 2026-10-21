@@ -9,7 +9,7 @@ match = re.search(r"CREATE TABLE IF NOT EXISTS receivable_items\((.*?)\)'''", co
 assert match, 'Missing receivable_items table in v9 migration'
 schema = 'CREATE TABLE IF NOT EXISTS receivable_items(' + match.group(1) + ')'
 assert 'if (oldVersion < 9)' in code
-assert 'version: 10' in code
+assert 'version: 11' in code
 
 con = sqlite3.connect(':memory:')
 con.execute('PRAGMA foreign_keys=ON')
@@ -37,7 +37,7 @@ assert con.execute('SELECT amount FROM receivables').fetchone()[0] == 80000
 # Old backup documents can omit the new line-item table and still be accepted.
 backup = (root / 'lib/services/backup_service.dart').read_text()
 assert "'receivable_items'" in backup
-assert "'databaseVersion': 10" in backup
-assert "[4, 5, 6, 7, 8, 9, 10]" in backup
+assert "'databaseVersion': 11" in backup
+assert "[4, 5, 6, 7, 8, 9, 10, 11]" in backup
 assert backup.index("'receivables'") < backup.index("'receivable_items'")
 print('OK: SQLite v9 item detail migration, legacy debt and payments preserved')

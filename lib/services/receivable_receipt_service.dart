@@ -175,7 +175,8 @@ String receivableThermalText(ReceivableReceiptData data, {int chars = 32}) {
       ..writeln(pair('1 x ${rupiah(r.amount)}', rupiah(r.amount)));
   } else {
     for (final line in data.lines) {
-      b..writeln(wrap(line.description))
+      final entry = line.entryDate.isEmpty ? dateLabel(r.createdAt) : dateLabel(line.entryDate);
+      b..writeln(wrap('$entry - ${line.description}'))
         ..writeln(pair('${line.qty} x ${rupiah(line.unitPrice)}', rupiah(line.total)));
     }
   }

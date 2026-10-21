@@ -23,6 +23,7 @@ class BackupService {
     'products', 'sales', 'services', 'customers', 'expenses',
     'digital_transactions', 'receipts', 'receipt_items',
     'stock_movements', 'service_events', 'cash_adjustments', 'store_notes', 'receivables', 'receivable_payments', 'agent_activity', 'receivable_items', 'receivable_receipt_events',
+    'receivable_payment_edits', 'receivable_bon_events',
   ];
   static const requiredTables = <String>{
     'products', 'sales', 'services', 'customers', 'expenses',
@@ -66,7 +67,7 @@ class BackupService {
     return <String, dynamic>{
       'format': 'agan-ponsel-sqlite-json',
       'formatVersion': 3,
-      'databaseVersion': 10,
+      'databaseVersion': 11,
       'createdAt': DateTime.now().toIso8601String(),
       'tables': records,
       'media': media,
@@ -116,7 +117,7 @@ class BackupService {
     if (payload['format'] != 'agan-ponsel-sqlite-json' || ![1, 2, 3].contains(payload['formatVersion'])) {
       throw const FormatException('Format atau versi backup tidak didukung');
     }
-    if (![4, 5, 6, 7, 8, 9, 10].contains(payload['databaseVersion'])) {
+    if (![4, 5, 6, 7, 8, 9, 10, 11].contains(payload['databaseVersion'])) {
       throw const FormatException('Backup memerlukan versi database yang berbeda');
     }
     final rawTables = payload['tables'];
@@ -235,6 +236,11 @@ class BackupService {
             await txn.insert(name, row, conflictAlgorithm: ConflictAlgorithm.abort);
           }
         }
+        // Backup lama belum memiliki tanggal per item: gunakan tanggal piutang.
+        await txn.rawUpdate('''UPDATE receivable_items SET entry_date =
+          COALESCE((SELECT substr(created_at,1,10) FROM receivables
+            WHERE receivables.id=receivable_items.receivable_id), strftime('%Y-%m-%d','now'))
+          WHERE entry_date = '' OR entry_date IS NULL''');
       });
     } catch (_) {
       for (final file in written) {

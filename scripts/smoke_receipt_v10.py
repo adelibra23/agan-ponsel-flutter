@@ -5,7 +5,7 @@ import sqlite3
 
 root = Path(__file__).resolve().parent.parent
 code = (root / 'lib/core/database.dart').read_text()
-assert 'version: 10' in code
+assert 'version: 11' in code
 assert 'if (oldVersion < 10)' in code
 match = re.search(r"CREATE TABLE IF NOT EXISTS receivable_receipt_events\((.*?)\)'''", code, re.S)
 assert match, 'Receipt events table migration missing'
@@ -21,8 +21,8 @@ assert con.execute('SELECT amount FROM receivables WHERE id=7').fetchone()[0] ==
 assert con.execute('SELECT COUNT(*) FROM receivable_receipt_events').fetchone()[0] == 1
 backup = (root / 'lib/services/backup_service.dart').read_text()
 assert "'receivable_receipt_events'" in backup
-assert "'databaseVersion': 10" in backup
-assert '[4, 5, 6, 7, 8, 9, 10]' in backup
+assert "'databaseVersion': 11" in backup
+assert '[4, 5, 6, 7, 8, 9, 10, 11]' in backup
 assert backup.index("'receivable_items'") < backup.index("'receivable_receipt_events'")
 assert "'receivable_receipt_template'" in backup
 print('OK: SQLite v10 receipt log, preservation and backup compatibility')

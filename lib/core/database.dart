@@ -73,8 +73,7 @@ class SaleResult {
 class AppDatabase {
   AppDatabase._();
   static Future<Database>? _opening;
-
-  // A failed database open must not poison all subsequent retries.
+  // Jangan cache Future yang gagal: layar pemulihan boleh mencoba ulang.
   static Future<Database> get instance => _opening ??= _openRecoverable();
 
   static Future<Database> _openRecoverable() async {
@@ -91,7 +90,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
@@ -102,9 +101,9 @@ class AppDatabase {
         await _createAgentAudit(db);
         await _createReceivableLines(db);
         await _createReceiptEvents(db);
+        await _createPaymentCorrections(db);
       },
-      // Repair missing additive tables/columns even if SQLite already reports
-      // the current user_version (e.g. an older partial upgrade).
+      // Menolong instalasi yang sebelumnya memiliki migrasi parsial.
       onOpen: (db) async {
         await _addProductFields(db);
         await _createExtra(db);
@@ -116,6 +115,7 @@ class AppDatabase {
         await _createAgentAudit(db);
         await _createReceivableLines(db);
         await _createReceiptEvents(db);
+        await _createPaymentCorrections(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -146,8 +146,52 @@ class AppDatabase {
         if (oldVersion < 10) {
           await _createReceiptEvents(db);
         }
+        if (oldVersion < 11) {
+          await _createPaymentCorrections(db);
+        }
       },
     );
+  }
+
+  // v11: tanggal bon per barang dan audit koreksi pembayaran.
+  // Tidak pernah menghapus pembayaran lama, pelanggan maupun catatan service.
+  static Future<void> _createPaymentCorrections(DatabaseExecutor db) async {
+    final columns = (await db.rawQuery('PRAGMA table_info(receivable_items)'))
+      .map((r) => r['name'] as String).toSet();
+    if (!columns.contains('entry_date')) {
+      await db.execute("ALTER TABLE receivable_items ADD COLUMN entry_date TEXT NOT NULL DEFAULT ''");
+    }
+    await db.execute('''UPDATE receivable_items SET entry_date =
+      COALESCE((SELECT substr(created_at, 1, 10) FROM receivables
+        WHERE receivables.id=receivable_items.receivable_id), strftime('%Y-%m-%d', 'now'))
+      WHERE entry_date = '' OR entry_date IS NULL''');
+    await db.execute('''CREATE TABLE IF NOT EXISTS receivable_payment_edits(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      receivable_id INTEGER NOT NULL,
+      payment_id INTEGER NOT NULL,
+      old_amount INTEGER NOT NULL,
+      new_amount INTEGER NOT NULL,
+      old_method TEXT NOT NULL,
+      new_method TEXT NOT NULL,
+      old_note TEXT NOT NULL,
+      new_note TEXT NOT NULL,
+      old_paid_at TEXT NOT NULL,
+      new_paid_at TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      edited_at TEXT NOT NULL,
+      FOREIGN KEY(receivable_id) REFERENCES receivables(id)
+    )''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_payment_edits_debt ON receivable_payment_edits(receivable_id)');
+    await db.execute('''CREATE TABLE IF NOT EXISTS receivable_bon_events(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      receivable_id INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      item_count INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(receivable_id) REFERENCES receivables(id)
+    )''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_bon_events_debt ON receivable_bon_events(receivable_id)');
   }
 
   // v10: Riwayat PERINTAH nota piutang, bukan bukti pesan WA terkirim.
