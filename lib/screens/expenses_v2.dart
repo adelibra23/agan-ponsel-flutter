@@ -475,12 +475,10 @@ class ExpenseAuditPage extends StatelessWidget {
         return ListView(padding: const EdgeInsets.all(16), children: [
           for (final row in snap.data!) Card(child: ListTile(
             title: Text('Transaksi #${row['expense_id']} • ${row['action']}'),
-            subtitle: Text('${row['reason']}
-${row['occurred_at']}
-'
+            subtitle: Text('${row['reason']}\n'
+              '${row['occurred_at']}\n'
               '${row['snapshot']}', maxLines: 5, overflow: TextOverflow.ellipsis),
-            trailing: Text('${rupiah((row['old_amount'] as num).toInt())}
-→ '
+            trailing: Text('${rupiah((row['old_amount'] as num).toInt())}\n→ '
               '${rupiah((row['new_amount'] as num).toInt())}',
               textAlign: TextAlign.end, style: const TextStyle(fontSize: 10)),
           )),
