@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/theme.dart';
 import 'core/database.dart';
+import 'services/background_jobs.dart';
 import 'core/format.dart';
 import 'widgets/identity.dart';
 import 'screens/dashboard.dart';
@@ -24,6 +25,8 @@ Future<void> main() async {
     final prefs = await SharedPreferences.getInstance();
     runApp(AganApp(initialDark: prefs.getBool('dark_mode') ?? false,
       initialTemplate: prefs.getString('app_template_style') ?? 'Biru Orbit'));
+    // Scheduling must never block login/PIN or crash startup on failure.
+    BackgroundJobs.init().catchError((Object _) {});
   } catch (error) {
     runApp(MaterialApp(debugShowCheckedModeBanner: false,
       home: Scaffold(body: SafeArea(child: Center(child: Padding(

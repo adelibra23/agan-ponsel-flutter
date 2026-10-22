@@ -16,6 +16,8 @@ needed = [
     '<uses-permission android:name="android.permission.READ_CONTACTS" />',
     '<uses-permission android:name="android.permission.USE_BIOMETRIC" />',
     '<uses-permission android:name="android.permission.INTERNET" />',
+    '<uses-permission android:name="android.permission.WAKE_LOCK" />',
+    '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />',
 ]
 match = re.search(r'<manifest\b[^>]*>', content)
 if not match:
@@ -72,3 +74,32 @@ for filename in (Path('android/app/src/main/res/values/styles.xml'),
                             '<style name="NormalTheme" parent="Theme.AppCompat.DayNight.NoActionBar">')
         filename.write_text(body)
 print('Contacts, biometrics and FlutterFragmentActivity prepared')
+
+
+# BUILD23_NOTIFICATION_DESUGARING: flutter_local_notifications 20 requires
+# core library desugaring even for immediate (non-exact) notifications.
+for filename in ('android/app/build.gradle.kts', 'android/app/build.gradle'):
+    gradle = Path(filename)
+    if not gradle.exists():
+        continue
+    body = gradle.read_text()
+    kotlin = filename.endswith('.kts')
+    flag = 'isCoreLibraryDesugaringEnabled = true' if kotlin else 'coreLibraryDesugaringEnabled true'
+    if flag not in body:
+        import re
+        matched = re.search(r'compileOptions\s*\{', body)
+        if not matched:
+            raise SystemExit(f'compileOptions block missing: {filename}')
+        body = body[:matched.end()] + '\n        ' + flag + body[matched.end():]
+    if kotlin:
+        body = body.replace('compileSdk = flutter.compileSdkVersion','compileSdk = 36')
+        dep = 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
+        if dep not in body:
+            body += '\ndependencies {\n    ' + dep + '\n}\n'
+    else:
+        body = body.replace('compileSdkVersion flutter.compileSdkVersion','compileSdkVersion 36')
+        dep = "coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'"
+        if dep not in body:
+            body += '\ndependencies {\n    ' + dep + '\n}\n'
+    gradle.write_text(body)
+print('Android notifications: desugaring + compileSdk >=35 configured')

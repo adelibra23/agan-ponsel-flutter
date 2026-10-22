@@ -9,6 +9,8 @@ import '../core/theme.dart';
 import '../widgets/kit.dart';
 import 'pos.dart';
 import 'settings/settings_pages.dart';
+import 'settings/debt_alarm_settings.dart';
+import 'settings/drive_backup_settings.dart';
 import 'security/pin_screens.dart';
 import 'receivables.dart';
 import 'app_templates.dart';
@@ -74,6 +76,12 @@ class MoreScreen extends StatelessWidget {
       _MenuItem(icon: Icons.account_circle_outlined, color: const Color(0xFF2783DC),
         title: 'Akun & Profil', subtitle: 'Identitas pengelola dan toko',
         onTap: () => open(const AccountSettingsScreen())),
+      _MenuItem(icon: Icons.cloud_upload_rounded, color: const Color(0xFF1677D8),
+        title: 'Google Drive Otomatis', subtitle: 'Jadwal backup cloud dan riwayat upload',
+        onTap: () => open(const DriveBackupSettingsScreen())),
+      _MenuItem(icon: Icons.notifications_active_outlined, color: const Color(0xFFDF7D22),
+        title: 'Alarm Jatuh Tempo', subtitle: 'Atur jam, suara dan hari pengingat piutang',
+        onTap: () => open(const DebtAlarmSettingsScreen())),
       _MenuItem(icon: Icons.backup_rounded, color: const Color(0xFF8054CB),
         title: 'Backup & Restore', subtitle: 'Simpan data SQLite, pulihkan saat ganti HP',
         onTap: () => open(const BackupRestoreScreen())),
@@ -606,6 +614,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onTap: () => go(const CashScreen())),
       const SizedBox(height: 12),
       const SectionTitle('Penyimpanan & perangkat'),
+      SettingsCard(icon: Icons.cloud_upload_rounded, color: const Color(0xFF1F77C6),
+        title: 'Jadwal Backup Google Drive', subtitle: 'Cadangan otomatis lewat akun Google',
+        onTap: () => go(const DriveBackupSettingsScreen())),
+      SettingsCard(icon: Icons.alarm_rounded, color: const Color(0xFFDE8A24),
+        title: 'Alarm Piutang', subtitle: 'Notifikasi jatuh tempo dan tagihan terlambat',
+        onTap: () => go(const DebtAlarmSettingsScreen())),
       SettingsCard(icon: Icons.backup_outlined, color: const Color(0xFF8751D1),
         title: 'Backup & Restore', subtitle: 'Simpan dan pulihkan data SQLite',
         onTap: () => go(const BackupRestoreScreen())),

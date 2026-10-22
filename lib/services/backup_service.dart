@@ -76,6 +76,21 @@ class BackupService {
     };
   }
 
+  /// Same SHA-256 envelope as manual export, without opening Android's file UI.
+  /// Safe for background jobs; this method never restores or deletes records.
+  static Future<Uint8List> createBackupBytes() async {
+    final payload = await _snapshot();
+    final payloadJson = jsonEncode(payload);
+    final bytes = Uint8List.fromList(utf8.encode(jsonEncode({
+      'sha256': sha256.convert(utf8.encode(payloadJson)).toString(),
+      'payload': payload,
+    })));
+    if (bytes.lengthInBytes > maxBackupBytes) {
+      throw StateError('Backup lebih dari 50 MB; ekspor otomatis dibatalkan.');
+    }
+    return bytes;
+  }
+
   static Future<Uri?> exportBackup() async {
     final payload = await _snapshot();
     final payloadJson = jsonEncode(payload);
