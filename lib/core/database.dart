@@ -90,7 +90,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 12,
+      version: 13,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
@@ -103,6 +103,7 @@ class AppDatabase {
         await _createReceiptEvents(db);
         await _createPaymentCorrections(db);
         await _createExpensesV12(db);
+        await _createExpensesV13(db);
       },
       // Menolong instalasi yang sebelumnya memiliki migrasi parsial.
       onOpen: (db) async {
@@ -118,6 +119,7 @@ class AppDatabase {
         await _createReceiptEvents(db);
         await _createPaymentCorrections(db);
         await _createExpensesV12(db);
+        await _createExpensesV13(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -154,8 +156,56 @@ class AppDatabase {
         if (oldVersion < 12) {
           await _createExpensesV12(db);
         }
+        if (oldVersion < 13) {
+          await _createExpensesV13(db);
+        }
       },
     );
+  }
+
+  /// v13: richer expense details + category visual metadata. All operations are
+  /// additive: existing amounts, categories, dates, and audit records survive.
+  static Future<void> _createExpensesV13(DatabaseExecutor db) async {
+    final expenseColumns = (await db.rawQuery('PRAGMA table_info(expenses)'))
+        .map((e) => e['name'] as String).toSet();
+    const expenseFields = <String, String>{
+      'quantity': 'INTEGER NOT NULL DEFAULT 1',
+      'unit_price': 'INTEGER NOT NULL DEFAULT 0',
+      'merchant': "TEXT NOT NULL DEFAULT ''",
+      'reference_code': "TEXT NOT NULL DEFAULT ''",
+    };
+    for (final field in expenseFields.entries) {
+      if (!expenseColumns.contains(field.key)) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN ${field.key} ${field.value}');
+      }
+    }
+    // Legacy expenses were lump sums. Treat each as 1 item, preserving amount.
+    await db.execute('UPDATE expenses SET unit_price=amount '
+        'WHERE unit_price=0 AND amount>0');
+    final categoryColumns = (await db.rawQuery('PRAGMA table_info(expense_categories)'))
+        .map((e) => e['name'] as String).toSet();
+    const categoryFields = <String, String>{
+      'icon_key': "TEXT NOT NULL DEFAULT 'receipt'",
+      'color_value': 'INTEGER NOT NULL DEFAULT 4282348490',
+    };
+    for (final field in categoryFields.entries) {
+      if (!categoryColumns.contains(field.key)) {
+        await db.execute('ALTER TABLE expense_categories ADD COLUMN ${field.key} ${field.value}');
+      }
+    }
+    // Assign attractive defaults once, without overwriting user customization.
+    if (!categoryColumns.contains('icon_key')) {
+      const icons = <String, String>{
+        'Operasional': 'store', 'Sparepart': 'wrench',
+        'Listrik & Air': 'bolt', 'Internet & Pulsa': 'wifi',
+        'Transportasi': 'truck', 'Sewa': 'store', 'Gaji': 'people',
+        'Peralatan': 'shopping', 'Lainnya': 'receipt',
+      };
+      for (final e in icons.entries) {
+        await db.update('expense_categories', {'icon_key': e.value},
+          where: 'name=?', whereArgs: [e.key]);
+      }
+    }
   }
 
   /// v12: additive expense categories, manual date/time and audit trail.

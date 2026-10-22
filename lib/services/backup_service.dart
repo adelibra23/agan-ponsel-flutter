@@ -68,7 +68,7 @@ class BackupService {
     return <String, dynamic>{
       'format': 'agan-ponsel-sqlite-json',
       'formatVersion': 3,
-      'databaseVersion': 12,
+      'databaseVersion': 13,
       'createdAt': DateTime.now().toIso8601String(),
       'tables': records,
       'media': media,
@@ -133,7 +133,7 @@ class BackupService {
     if (payload['format'] != 'agan-ponsel-sqlite-json' || ![1, 2, 3].contains(payload['formatVersion'])) {
       throw const FormatException('Format atau versi backup tidak didukung');
     }
-    if (![4, 5, 6, 7, 8, 9, 10, 11, 12].contains(payload['databaseVersion'])) {
+    if (![4, 5, 6, 7, 8, 9, 10, 11, 12, 13].contains(payload['databaseVersion'])) {
       throw const FormatException('Backup memerlukan versi database yang berbeda');
     }
     final rawTables = payload['tables'];

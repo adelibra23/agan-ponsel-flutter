@@ -8,6 +8,24 @@ import 'package:flutter/services.dart';
 import '../core/format.dart';
 import '../services/expenses_service.dart';
 
+/// Icon set deliberately whitelisted: the database stores stable keys, never
+/// icon code points which might change between Flutter releases.
+IconData expenseIcon(String key) => switch (key) {
+  'shopping' => Icons.shopping_bag_outlined,
+  'store' => Icons.storefront_outlined,
+  'truck' => Icons.local_shipping_outlined,
+  'bolt' => Icons.bolt_outlined,
+  'wifi' => Icons.wifi_rounded,
+  'wrench' => Icons.build_outlined,
+  'wallet' => Icons.account_balance_wallet_outlined,
+  'food' => Icons.restaurant_outlined,
+  'people' => Icons.groups_outlined,
+  'print' => Icons.print_outlined,
+  'medical' => Icons.medical_services_outlined,
+  _ => Icons.receipt_long_outlined,
+};
+
+
 /// Expense management: category CRUD (archival), detailed entry, date/time edit,
 /// auditable correction/removal, list filters and portable CSV export.
 class ExpensesManagementScreen extends StatefulWidget {
@@ -18,12 +36,18 @@ class ExpensesManagementScreen extends StatefulWidget {
 
 class _ExpensesManagementScreenState extends State<ExpensesManagementScreen> {
   late Future<List<ExpenseEntry>> entries;
+  late Future<List<ExpenseCategory>> categoriesFuture;
   String search = '';
   String period = 'Bulan ini';
   int? categoryFilter;
   @override
   void initState() { super.initState(); refresh(); }
-  void refresh() { if (mounted) setState(() => entries = ExpensesService.list()); }
+  void refresh() {
+    if (mounted) setState(() {
+      entries = ExpensesService.list();
+      categoriesFuture = ExpensesService.categories(showArchived: true);
+    });
+  }
 
   List<ExpenseEntry> filtered(List<ExpenseEntry> all) {
     final now = DateTime.now();
@@ -60,10 +84,11 @@ class _ExpensesManagementScreenState extends State<ExpensesManagementScreen> {
   Future<void> exportCsv(List<ExpenseEntry> shown) async {
     try {
       final lines = <String>[
-        'ID,Tanggal,Waktu,Kategori,Keterangan,Nominal,Metode,Catatan',
+        'ID,Tanggal,Waktu,Kategori,Keterangan,Harga Satuan,Jumlah,Total,Metode,Toko,Sumber,Catatan',
         for (final e in shown) [e.id, dateLabel(e.date.toIso8601String()),
           timeLabel(e.date.toIso8601String()), e.category, e.description,
-          e.amount, e.method, e.note].map(csvCell).join(','),
+          e.unitPrice, e.quantity, e.amount, e.method, e.merchant,
+          e.referenceCode, e.note].map(csvCell).join(','),
       ];
       final bytes = Uint8List.fromList(utf8.encode('\uFEFF${lines.join('\r\n')}\r\n'));
       final result = await FilePicker.saveFile(dialogTitle: 'Ekspor Pengeluaran ke CSV',
@@ -112,27 +137,42 @@ class _ExpensesManagementScreenState extends State<ExpensesManagementScreen> {
             hintText: 'Cari pengeluaran atau catatan',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)))),
         const SizedBox(height: 10),
-        Row(children: [
-          Expanded(child: DropdownButtonFormField<String>(
-            isExpanded: true, initialValue: period,
-            decoration: const InputDecoration(labelText: 'Periode'),
-            items: const ['Hari ini','Bulan ini','Tahun ini','Semua']
-              .map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-            onChanged: (v) { if (v != null) setState(() => period = v); })),
-          const SizedBox(width: 9),
-          Expanded(child: FutureBuilder<List<ExpenseCategory>>(
-            future: ExpensesService.categories(showArchived: true), builder: (ctx, cat) {
-              final categories = cat.data ?? <ExpenseCategory>[];
-              final exists = categoryFilter == null || categories.any((c) => c.id == categoryFilter);
-              return DropdownButtonFormField<int>(isExpanded: true,
-                initialValue: exists ? categoryFilter : null,
-                decoration: const InputDecoration(labelText: 'Kategori'),
-                items: [const DropdownMenuItem<int>(value: null, child: Text('Semua kategori')),
-                  ...categories.map((c) => DropdownMenuItem<int>(value: c.id,
-                    child: Text(c.name, overflow: TextOverflow.ellipsis)))],
-                onChanged: (v) => setState(() => categoryFilter = v));
-            })),
+        DropdownButtonFormField<String>(
+          isExpanded: true, initialValue: period,
+          decoration: const InputDecoration(labelText: 'Periode laporan'),
+          items: const ['Hari ini','Bulan ini','Tahun ini','Semua']
+            .map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+          onChanged: (v) { if (v != null) setState(() => period = v); }),
+        const SizedBox(height: 16),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('Kategori', style: Theme.of(context).textTheme.titleMedium),
+          TextButton.icon(onPressed: openCategories,
+            icon: const Icon(Icons.tune_rounded, size: 18), label: const Text('Atur')),
         ]),
+        SizedBox(height: 52, child: FutureBuilder<List<ExpenseCategory>>(
+          future: categoriesFuture, builder: (ctx, categorySnapshot) {
+            final cats = categorySnapshot.data ?? <ExpenseCategory>[];
+            return ListView(scrollDirection: Axis.horizontal,
+              key: const PageStorageKey('expense-category-tabs'), children: [
+              Padding(padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(label: const Text('Semua'),
+                  selected: categoryFilter == null,
+                  onSelected: (_) => setState(() => categoryFilter = null))),
+              for (final category in cats) Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(expenseIcon(category.iconKey), size: 17,
+                      color: Color(category.colorValue)),
+                    const SizedBox(width: 6),
+                    Text(category.name),
+                  ]),
+                  selected: categoryFilter == category.id,
+                  selectedColor: Color(category.colorValue).withValues(alpha: .16),
+                  onSelected: (_) => setState(() => categoryFilter = category.id),
+                )),
+            ]);
+          })),
         const SizedBox(height: 10),
         Row(children: [
           Expanded(child: OutlinedButton.icon(onPressed: openCategories,
@@ -148,11 +188,14 @@ class _ExpensesManagementScreenState extends State<ExpensesManagementScreen> {
         for (final e in shown) Padding(padding: const EdgeInsets.only(bottom: 9),
           child: Card(child: ListTile(onTap: () => openDetail(e),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            leading: const CircleAvatar(child: Icon(Icons.receipt_long_outlined, size: 20)),
+            leading: CircleAvatar(
+              backgroundColor: Color(e.colorValue).withValues(alpha: .13),
+              child: Icon(expenseIcon(e.iconKey), color: Color(e.colorValue), size: 20)),
             title: Text(e.description, maxLines: 2, overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w800)),
             subtitle: Text('${e.category} • ${dateLabel(e.date.toIso8601String())} '
-              '${timeLabel(e.date.toIso8601String())}\n${e.method}',
+              '${timeLabel(e.date.toIso8601String())}\n'
+              '${e.quantity} × ${rupiah(e.unitPrice)} • ${e.method}',
               style: const TextStyle(fontSize: 11.5)),
             isThreeLine: true,
             trailing: Column(mainAxisAlignment: MainAxisAlignment.center,
@@ -177,7 +220,14 @@ class ExpenseEditorPage extends StatefulWidget {
 
 class _ExpenseEditorPageState extends State<ExpenseEditorPage> {
   late final TextEditingController description = TextEditingController(text: widget.entry?.description ?? widget.copyFrom?.description ?? '');
-  late final TextEditingController amount = TextEditingController(text: widget.entry?.amount.toString() ?? widget.copyFrom?.amount.toString() ?? '');
+  late final TextEditingController price = TextEditingController(
+    text: widget.entry?.unitPrice.toString() ?? widget.copyFrom?.unitPrice.toString() ?? '');
+  late final TextEditingController quantity = TextEditingController(
+    text: (widget.entry?.quantity ?? widget.copyFrom?.quantity ?? 1).toString());
+  late final TextEditingController merchant = TextEditingController(
+    text: widget.entry?.merchant ?? widget.copyFrom?.merchant ?? '');
+  late final TextEditingController reference = TextEditingController(
+    text: widget.entry?.referenceCode ?? widget.copyFrom?.referenceCode ?? '');
   late final TextEditingController note = TextEditingController(text: widget.entry?.note ?? widget.copyFrom?.note ?? '');
   final reason = TextEditingController();
   late DateTime when = widget.entry?.date ?? DateTime.now();
@@ -194,7 +244,10 @@ class _ExpenseEditorPageState extends State<ExpenseEditorPage> {
   void reloadCategories() => categoriesFuture = ExpensesService.categories(showArchived: true);
   @override
   void dispose() {
-    description.dispose(); amount.dispose(); note.dispose(); reason.dispose(); super.dispose();
+    for (final controller in [description, price, quantity, merchant, reference, note, reason]) {
+      controller.dispose();
+    }
+    super.dispose();
   }
   Future<void> chooseDate() async {
     final date = await showDatePicker(context: context, initialDate: when,
@@ -209,18 +262,30 @@ class _ExpenseEditorPageState extends State<ExpenseEditorPage> {
     setState(() => when = DateTime(when.year, when.month, when.day, time.hour, time.minute));
   }
   Future<void> addCategory() async {
-    final value = await _askText(context, title: 'Tambah Kategori', hint: 'Contoh: Belanja Sparepart');
-    if (value == null) return;
+    final draft = await showExpenseCategoryEditor(context);
+    if (draft == null) return;
     try {
-      final id = await ExpensesService.addCategory(value);
+      final id = await ExpensesService.addCategory(draft.name,
+        iconKey: draft.iconKey, colorValue: draft.colorValue);
       if (!mounted) return;
       setState(() { categoryId = id; reloadCategories(); });
     } catch (e) { if (mounted) notify(context, '$e'); }
   }
+
+  int? get calculatedTotal {
+    final n = nonNegative(price.text);
+    final qty = int.tryParse(quantity.text);
+    if (n == null || qty == null) return null;
+    try { return ExpensesService.calculateAmount(unitPrice: n, quantity: qty); }
+    on FormatException { return null; }
+  }
   Future<void> save() async {
-    final n = nonNegative(amount.text);
-    if (n == null || n <= 0 || description.text.trim().isEmpty) {
-      notify(context, 'Masukkan keterangan dan nominal yang valid'); return;
+    final n = calculatedTotal;
+    final unit = nonNegative(price.text);
+    final qty = int.tryParse(quantity.text);
+    if (n == null || unit == null || qty == null || description.text.trim().isEmpty) {
+      notify(context, 'Isi nama pengeluaran, harga satuan, dan jumlah yang valid');
+      return;
     }
     if (widget.entry != null && reason.text.trim().length < 4) {
       notify(context, 'Tulis alasan perubahan minimal 4 karakter'); return;
@@ -229,11 +294,15 @@ class _ExpenseEditorPageState extends State<ExpenseEditorPage> {
     try {
       if (widget.entry == null) {
         await ExpensesService.create(description: description.text, amount: n,
-          date: when, categoryId: categoryId, method: method, note: note.text);
+          date: when, categoryId: categoryId, method: method, note: note.text,
+          quantity: qty, unitPrice: unit, merchant: merchant.text,
+          referenceCode: reference.text);
       } else {
         await ExpensesService.edit(widget.entry!.id, description: description.text,
           amount: n, date: when, categoryId: categoryId,
-          method: method, note: note.text, reason: reason.text);
+          method: method, note: note.text, reason: reason.text,
+          quantity: qty, unitPrice: unit, merchant: merchant.text,
+          referenceCode: reference.text);
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) { if (mounted) notify(context, '$e'); }
@@ -254,10 +323,39 @@ class _ExpenseEditorPageState extends State<ExpenseEditorPage> {
           decoration: const InputDecoration(labelText: 'Nama pengeluaran *',
             prefixIcon: Icon(Icons.edit_note))),
         const SizedBox(height: 11),
-        TextField(controller: amount, keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(labelText: 'Nominal (Rp) *',
-            prefixIcon: Icon(Icons.payments_outlined))),
+        Row(children: [
+          Expanded(flex: 3, child: TextField(controller: price,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(labelText: 'Harga satuan (Rp) *',
+              prefixIcon: Icon(Icons.payments_outlined)))),
+          const SizedBox(width: 10),
+          Expanded(flex: 2, child: TextField(controller: quantity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(labelText: 'Jumlah *',
+              prefixIcon: Icon(Icons.numbers_rounded)))),
+        ]),
+        const SizedBox(height: 10),
+        Card(child: Padding(padding: const EdgeInsets.all(16),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [const Expanded(child: Text('Total pengeluaran',
+                style: TextStyle(fontWeight: FontWeight.w700))),
+              Flexible(child: Text(calculatedTotal == null ? '—' : rupiah(calculatedTotal!),
+                textAlign: TextAlign.end, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17,
+                  color: Theme.of(context).colorScheme.primary))),
+            ]))),
+        const SizedBox(height: 11),
+        TextField(controller: merchant, maxLength: 100,
+          decoration: const InputDecoration(labelText: 'Toko / penerima (opsional)',
+            prefixIcon: Icon(Icons.storefront_outlined))),
+        const SizedBox(height: 9),
+        TextField(controller: reference, maxLength: 80,
+          decoration: const InputDecoration(labelText: 'No. nota / referensi (opsional)',
+            prefixIcon: Icon(Icons.numbers_outlined))),
         const SizedBox(height: 11),
         Row(children: [
           Expanded(child: DropdownButtonFormField<int>(key: ValueKey('expense-category-$categoryId'), isExpanded: true,
@@ -266,7 +364,11 @@ class _ExpenseEditorPageState extends State<ExpenseEditorPage> {
             items: [const DropdownMenuItem<int>(value: null, child: Text('Lainnya (default)')),
               ...cats.where((c) => !c.archived || c.id == categoryId).map((c) =>
                 DropdownMenuItem<int>(value: c.id,
-                  child: Text(c.name, overflow: TextOverflow.ellipsis)))],
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(expenseIcon(c.iconKey), size: 17, color: Color(c.colorValue)),
+                    const SizedBox(width: 6),
+                    Flexible(child: Text(c.name, overflow: TextOverflow.ellipsis)),
+                  ])))],
             onChanged: (v) => setState(() => categoryId = v))),
           IconButton(tooltip: 'Tambah kategori', onPressed: addCategory,
             icon: const Icon(Icons.add_circle_outline)),
@@ -355,7 +457,12 @@ class _ExpenseDetailPageState extends State<ExpenseDetailPage> {
       final e = snap.data;
       if (e == null) return const Center(child: Text('Pengeluaran tidak ditemukan'));
       final details = <String, String>{
-        'Kategori': e.category, 'Nominal': rupiah(e.amount),
+        'Kategori': e.category,
+        'Harga satuan': rupiah(e.unitPrice),
+        'Jumlah': e.quantity.toString(),
+        'Total pengeluaran': rupiah(e.amount),
+        'Toko / penerima': e.merchant.isEmpty ? '—' : e.merchant,
+        'No. nota / referensi': e.referenceCode.isEmpty ? '—' : e.referenceCode,
         'Tanggal': dateLabel(e.date.toIso8601String()),
         'Waktu': timeLabel(e.date.toIso8601String()),
         'Metode': e.method, 'Catatan': e.note.isEmpty ? '—' : e.note,
@@ -376,7 +483,8 @@ class _ExpenseDetailPageState extends State<ExpenseDetailPage> {
         FilledButton.icon(onPressed: () => edit(e),
           icon: const Icon(Icons.edit_outlined), label: const Text('Edit Detail & Waktu')),
         OutlinedButton.icon(onPressed: () => Clipboard.setData(ClipboardData(
-          text: '${e.description} • ${rupiah(e.amount)} • ${e.category} • '
+          text: '${e.description} • ${e.quantity} × ${rupiah(e.unitPrice)} = '
+            '${rupiah(e.amount)} • ${e.category} • ${e.merchant} • '
             '${dateLabel(e.date.toIso8601String())} ${timeLabel(e.date.toIso8601String())}'))
           .then((_) { if (mounted) notify(context, 'Detail disalin'); }),
           icon: const Icon(Icons.copy), label: const Text('Salin Detail')),
@@ -411,17 +519,22 @@ class _ExpenseCategoriesPageState extends State<ExpenseCategoriesPage> {
   void initState() { super.initState(); reload(); }
   void reload() => setState(() => loader = ExpensesService.categories(showArchived: true));
   Future<void> create() async {
-    final name = await _askText(context, title: 'Tambah kategori pengeluaran', hint: 'Nama kategori');
-    if (name == null) return;
-    try { await ExpensesService.addCategory(name); if (mounted) reload(); }
-    catch (e) { if (mounted) notify(context, '$e'); }
+    final draft = await showExpenseCategoryEditor(context);
+    if (draft == null) return;
+    try {
+      await ExpensesService.addCategory(draft.name,
+        iconKey: draft.iconKey, colorValue: draft.colorValue);
+      if (mounted) reload();
+    } catch (e) { if (mounted) notify(context, '$e'); }
   }
-  Future<void> rename(ExpenseCategory cat) async {
-    final value = await _askText(context, title: 'Ganti nama kategori',
-      hint: 'Nama baru untuk ${cat.name}');
-    if (value == null) return;
-    try { await ExpensesService.renameCategory(cat.id, value); if (mounted) reload(); }
-    catch (e) { if (mounted) notify(context, '$e'); }
+  Future<void> editCategory(ExpenseCategory cat) async {
+    final draft = await showExpenseCategoryEditor(context, initial: cat);
+    if (draft == null) return;
+    try {
+      await ExpensesService.updateCategory(cat.id, name: draft.name,
+        iconKey: draft.iconKey, colorValue: draft.colorValue);
+      if (mounted) reload();
+    } catch (e) { if (mounted) notify(context, '$e'); }
   }
   Future<void> toggle(ExpenseCategory cat) async {
     try {
@@ -442,11 +555,13 @@ class _ExpenseCategoriesPageState extends State<ExpenseCategoriesPage> {
           'menyembunyikan kategori dari transaksi baru.'),
         const SizedBox(height: 14),
         for (final cat in snap.data!) Card(child: ListTile(
-          leading: Icon(cat.archived ? Icons.archive_outlined : Icons.category_outlined),
+          leading: CircleAvatar(
+            backgroundColor: Color(cat.colorValue).withValues(alpha: .14),
+            child: Icon(expenseIcon(cat.iconKey), color: Color(cat.colorValue))),
           title: Text(cat.name), subtitle: Text(cat.archived ? 'Diarsipkan' : 'Aktif'),
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-            IconButton(tooltip: 'Edit nama kategori',
-              onPressed: cat.name.toLowerCase() == 'lainnya' ? null : () => rename(cat),
+            IconButton(tooltip: 'Edit nama, ikon, dan warna',
+              onPressed: () => editCategory(cat),
               icon: const Icon(Icons.edit_outlined, size: 19)),
             IconButton(tooltip: cat.archived ? 'Aktifkan' : 'Arsipkan',
               onPressed: cat.name.toLowerCase() == 'lainnya' ? null : () => toggle(cat),
@@ -485,6 +600,80 @@ class ExpenseAuditPage extends StatelessWidget {
         ]);
       }),
   );
+}
+
+/// Bottom sheet to pick category name, stable icon key and persistent color.
+class ExpenseCategoryDraft {
+  final String name;
+  final String iconKey;
+  final int colorValue;
+  const ExpenseCategoryDraft(this.name, this.iconKey, this.colorValue);
+}
+
+Future<ExpenseCategoryDraft?> showExpenseCategoryEditor(BuildContext context,
+    {ExpenseCategory? initial}) => showModalBottomSheet<ExpenseCategoryDraft>(
+  context: context, isScrollControlled: true, showDragHandle: true,
+  builder: (_) => _ExpenseCategoryEditorSheet(initial: initial),
+);
+
+class _ExpenseCategoryEditorSheet extends StatefulWidget {
+  final ExpenseCategory? initial;
+  const _ExpenseCategoryEditorSheet({this.initial});
+  @override
+  State<_ExpenseCategoryEditorSheet> createState() => _ExpenseCategoryEditorSheetState();
+}
+
+class _ExpenseCategoryEditorSheetState extends State<_ExpenseCategoryEditorSheet> {
+  late final TextEditingController name = TextEditingController(text: widget.initial?.name ?? '');
+  late String selectedIcon = widget.initial?.iconKey ?? 'receipt';
+  late int selectedColor = widget.initial?.colorValue ?? 0xFF3F73CA;
+  @override
+  void dispose() { name.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => SafeArea(child: SingleChildScrollView(
+    padding: EdgeInsets.fromLTRB(20, 8, 20,
+      MediaQuery.viewInsetsOf(context).bottom + 28),
+    child: Column(mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(widget.initial == null ? 'Tambah Kategori' : 'Edit Kategori',
+        style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 16),
+      TextField(controller: name, maxLength: 35,
+        decoration: const InputDecoration(labelText: 'Nama kategori *',
+          prefixIcon: Icon(Icons.category_outlined))),
+      const SizedBox(height: 10),
+      Text('Pilih ikon', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 8),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final iconKey in ExpensesService.iconKeys)
+          ChoiceChip(label: Icon(expenseIcon(iconKey), size: 22),
+            selected: selectedIcon == iconKey,
+            onSelected: (_) => setState(() => selectedIcon = iconKey)),
+      ]),
+      const SizedBox(height: 18),
+      Text('Pilih warna', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 10),
+      Wrap(spacing: 10, runSpacing: 10, children: [
+        for (final value in ExpensesService.colors)
+          InkWell(onTap: () => setState(() => selectedColor = value),
+            borderRadius: BorderRadius.circular(40),
+            child: CircleAvatar(radius: 23, backgroundColor: Color(value),
+              child: selectedColor == value ? const Icon(Icons.check, color: Colors.white) : null)),
+      ]),
+      const SizedBox(height: 20),
+      SizedBox(width: double.infinity, child: FilledButton.icon(
+        onPressed: () {
+          final title = name.text.trim();
+          if (title.length < 2 || title.length > 35) {
+            notify(context, 'Nama kategori harus 2–35 karakter'); return;
+          }
+          Navigator.pop(context, ExpenseCategoryDraft(title, selectedIcon, selectedColor));
+        },
+        icon: const Icon(Icons.check_circle_outline),
+        label: const Text('Simpan Kategori'))),
+    ]),
+  ));
 }
 
 Future<String?> _askText(BuildContext context, {required String title, required String hint}) async {

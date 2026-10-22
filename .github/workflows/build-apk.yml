@@ -87,6 +87,11 @@ jobs:
           python3 scripts/check_build24.py
           python3 scripts/smoke_expenses_v12.py
 
+      - name: Smoke test expense quantities and category visuals v13
+        run: |
+          python3 scripts/check_build25.py
+          python3 scripts/smoke_expenses_v13.py
+
       - name: Analyze Flutter code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
@@ -113,7 +118,7 @@ jobs:
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-v1.4.0-Build24-APK
+          name: AGAN-PONSEL-v1.5.0-Build25-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
