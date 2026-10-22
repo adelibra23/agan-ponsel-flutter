@@ -82,11 +82,16 @@ jobs:
       - name: Check Build23 cloud/alarms integration
         run: python3 scripts/check_build23.py
 
+      - name: Check AGAN PONSEL Build24
+        run: |
+          python3 scripts/check_build24.py
+          python3 scripts/smoke_expenses_v12.py
+
       - name: Analyze Flutter code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run basic unit tests
-        run: flutter test test/format_test.dart test/feature_test.dart test/theme_contrast_test.dart test/receivables_test.dart test/agana_intents_test.dart test/ai_providers_test.dart test/receivable_details_test.dart test/receivable_receipt_test.dart test/receivable_build22_test.dart test/build23_schedule_test.dart
+        run: flutter test test/format_test.dart test/feature_test.dart test/theme_contrast_test.dart test/receivables_test.dart test/agana_intents_test.dart test/ai_providers_test.dart test/receivable_details_test.dart test/receivable_receipt_test.dart test/receivable_build22_test.dart test/build23_schedule_test.dart test/build24_expenses_test.dart
 
       - name: Install Node.js 22 for WhatsApp tests
         uses: actions/setup-node@v4
@@ -108,7 +113,7 @@ jobs:
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AGAN-PONSEL-v1.3.0-Build23-APK
+          name: AGAN-PONSEL-v1.4.0-Build24-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14

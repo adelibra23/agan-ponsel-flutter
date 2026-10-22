@@ -23,6 +23,8 @@ Future<void> main() async {
   // Do not leave the screen permanently blank if preferences fail to load.
   try {
     final prefs = await SharedPreferences.getInstance();
+    final family = prefs.getString('app_font_family') ?? 'Roboto';
+    aganFontFamily.value = appFontChoices.containsKey(family) ? family : 'Roboto';
     runApp(AganApp(initialDark: prefs.getBool('dark_mode') ?? false,
       initialTemplate: prefs.getString('app_template_style') ?? 'Biru Orbit'));
     // Scheduling must never block login/PIN or crash startup on failure.
@@ -57,6 +59,20 @@ class AganApp extends StatefulWidget {
 }
 
 class _AganAppState extends State<AganApp> {
+  @override
+  void initState() {
+    super.initState();
+    aganFontFamily.addListener(_onFontChanged);
+  }
+
+  void _onFontChanged() { if (mounted) setState(() {}); }
+
+  @override
+  void dispose() {
+    aganFontFamily.removeListener(_onFontChanged);
+    super.dispose();
+  }
+
   late bool dark = widget.initialDark;
   late String template = widget.initialTemplate;
   Future<void> changeTemplate(String value) async {

@@ -6,12 +6,31 @@ const brandNavy = Color(0xFF0C1936);
 
 
 /// Preset tampilan. Bisa diganti tanpa mengubah tema terang/gelap.
-const appTemplates = <String>['Biru Orbit', 'Midnight', 'Emerald', 'Sunset'];
+const appTemplates = <String>[
+  'Biru Orbit', 'Midnight', 'Emerald', 'Sunset',
+  'Ocean', 'Rose Quartz', 'Graphite', 'Golden',
+];
+
+/// Global notifier applies the chosen system font immediately across MaterialApp.
+/// Fonts are Android system families: no external font download is required.
+final ValueNotifier<String> aganFontFamily = ValueNotifier<String>('Roboto');
+const appFontChoices = <String, String>{
+  'Roboto': 'Roboto · Standar',
+  'sans-serif': 'Sans Serif · Clean',
+  'sans-serif-medium': 'Sans Medium · Modern',
+  'sans-serif-condensed': 'Condensed · Ringkas',
+  'serif': 'Serif · Elegan',
+  'monospace': 'Monospace · Teknologi',
+};
 Color templateAccent(String name) {
   switch (name) {
     case 'Midnight': return const Color(0xFF5368E7);
     case 'Emerald': return const Color(0xFF008D78);
     case 'Sunset': return const Color(0xFFDC643A);
+    case 'Ocean': return const Color(0xFF057CB6);
+    case 'Rose Quartz': return const Color(0xFFB43C83);
+    case 'Graphite': return const Color(0xFF454B5A);
+    case 'Golden': return const Color(0xFFA36D12);
     default: return brandBlue;
   }
 }
@@ -20,6 +39,10 @@ List<Color> templateGradient(String name) {
     case 'Midnight': return const [Color(0xFF191953), Color(0xFF3843A4), Color(0xFF7671E6)];
     case 'Emerald': return const [Color(0xFF074D52), Color(0xFF087E79), Color(0xFF0FBDA2)];
     case 'Sunset': return const [Color(0xFF7A2959), Color(0xFFCA4C51), Color(0xFFF7A44B)];
+    case 'Ocean': return const [Color(0xFF084A79), Color(0xFF087DAC), Color(0xFF15B2D1)];
+    case 'Rose Quartz': return const [Color(0xFF79315E), Color(0xFFB5418B), Color(0xFFE88CB9)];
+    case 'Graphite': return const [Color(0xFF252B39), Color(0xFF46536B), Color(0xFF78859B)];
+    case 'Golden': return const [Color(0xFF6C4511), Color(0xFFA97720), Color(0xFFF3BF59)];
     default: return const [Color(0xFF052B8C), Color(0xFF075FD4), Color(0xFF02A0F0)];
   }
 }
@@ -51,7 +74,7 @@ ThemeData aganTheme(Brightness brightness, {String template = 'Biru Orbit'}) {
     brightness: brightness,
   );
   final type = base.textTheme
-      .apply(fontFamily: 'Roboto', bodyColor: foreground, displayColor: foreground)
+      .apply(fontFamily: aganFontFamily.value, bodyColor: foreground, displayColor: foreground)
       .copyWith(
         headlineSmall: TextStyle(color: foreground, fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: -.7),
         titleLarge: TextStyle(color: foreground, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.45),
@@ -77,8 +100,10 @@ ThemeData aganTheme(Brightness brightness, {String template = 'Biru Orbit'}) {
     listTileTheme: ListTileThemeData(
       textColor: foreground,
       iconColor: muted,
-      titleTextStyle: TextStyle(color: foreground, fontWeight: FontWeight.w800, fontSize: 14),
-      subtitleTextStyle: TextStyle(color: muted, fontSize: 12, height: 1.4),
+      titleTextStyle: TextStyle(color: foreground, fontWeight: FontWeight.w800, fontSize: 14,
+        fontFamily: aganFontFamily.value),
+      subtitleTextStyle: TextStyle(color: muted, fontSize: 12, height: 1.4,
+        fontFamily: aganFontFamily.value),
     ),
     dividerTheme: DividerThemeData(color: outline.withValues(alpha: .8), thickness: .8),
     inputDecorationTheme: InputDecorationTheme(
@@ -99,7 +124,8 @@ ThemeData aganTheme(Brightness brightness, {String template = 'Biru Orbit'}) {
       scrolledUnderElevation: 0,
       centerTitle: false,
       elevation: 0,
-      titleTextStyle: TextStyle(color: foreground, fontSize: 19, fontWeight: FontWeight.w900),
+      titleTextStyle: TextStyle(color: foreground, fontSize: 19, fontWeight: FontWeight.w900,
+        fontFamily: aganFontFamily.value),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: surface,

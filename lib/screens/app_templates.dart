@@ -16,17 +16,32 @@ class AppTemplatesScreen extends StatefulWidget {
 class _AppTemplatesScreenState extends State<AppTemplatesScreen> {
   late String selected = widget.currentStyle;
   String message = 'Ramah';
+  String selectedFont = 'Roboto';
   @override
   void initState() { super.initState(); loadMessage(); }
   Future<void> loadMessage() async {
     final prefs = await SharedPreferences.getInstance();
-    if (mounted) setState(() => message = prefs.getString('reminder_message_template') ?? 'Ramah');
+    if (mounted) setState(() {
+      message = prefs.getString('reminder_message_template') ?? 'Ramah';
+      selectedFont = prefs.getString('app_font_family') ?? 'Roboto';
+      if (!appFontChoices.containsKey(selectedFont)) selectedFont = 'Roboto';
+    });
   }
 
   Future<void> change(String style) async {
     setState(() => selected = style);
     widget.onStyleChanged(style);
     notify(context, 'Template $style diterapkan');
+  }
+
+  Future<void> changeFont(String font) async {
+    if (!appFontChoices.containsKey(font)) return;
+    await (await SharedPreferences.getInstance()).setString('app_font_family', font);
+    aganFontFamily.value = font;
+    if (mounted) {
+      setState(() => selectedFont = font);
+      notify(context, 'Tipografi ${appFontChoices[font]} diterapkan');
+    }
   }
 
   Future<void> changeMessage(String style) async {
@@ -43,6 +58,19 @@ class _AppTemplatesScreenState extends State<AppTemplatesScreen> {
         _ThemeOption(name: name, selected: selected == name, onTap: () => change(name)),
         const SizedBox(height: 10),
       ],
+      const SizedBox(height: 18),
+      const SectionTitle('Jenis Tipografi',
+        subtitle: 'Pilih font yang nyaman dibaca. Berlaku untuk seluruh aplikasi.'),
+      Surface(child: Column(children: [
+        for (final item in appFontChoices.entries)
+          RadioListTile<String>(
+            title: Text(item.value, style: TextStyle(fontFamily: item.key,
+              fontWeight: FontWeight.w700)),
+            subtitle: Text('AGAN PONSEL · Rp125.000',
+              style: TextStyle(fontFamily: item.key)),
+            value: item.key, groupValue: selectedFont,
+            onChanged: (v) { if (v != null) changeFont(v); }),
+      ])),
       const SizedBox(height: 20),
       const SectionTitle('Template pesan pengingat',
         subtitle: 'Pesan bisa disalin dari Detail Piutang. Tidak terkirim otomatis.'),
@@ -55,7 +83,7 @@ class _AppTemplatesScreenState extends State<AppTemplatesScreen> {
       Surface(child: Row(children: [
         Icon(Icons.auto_awesome_rounded, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 12),
-        const Expanded(child: Text('Pilihan warna dan pesan disimpan di Android dan ikut dalam backup.',
+        const Expanded(child: Text('Warna, font dan pesan disimpan di Android dan ikut dalam backup.',
           style: TextStyle(fontSize: 12))),
       ])),
     ]),

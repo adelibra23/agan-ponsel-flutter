@@ -90,7 +90,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
@@ -102,6 +102,7 @@ class AppDatabase {
         await _createReceivableLines(db);
         await _createReceiptEvents(db);
         await _createPaymentCorrections(db);
+        await _createExpensesV12(db);
       },
       // Menolong instalasi yang sebelumnya memiliki migrasi parsial.
       onOpen: (db) async {
@@ -116,6 +117,7 @@ class AppDatabase {
         await _createReceivableLines(db);
         await _createReceiptEvents(db);
         await _createPaymentCorrections(db);
+        await _createExpensesV12(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -149,8 +151,51 @@ class AppDatabase {
         if (oldVersion < 11) {
           await _createPaymentCorrections(db);
         }
+        if (oldVersion < 12) {
+          await _createExpensesV12(db);
+        }
       },
     );
+  }
+
+  /// v12: additive expense categories, manual date/time and audit trail.
+  static Future<void> _createExpensesV12(DatabaseExecutor db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS expense_categories(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      archived INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )''');
+    await db.execute('''CREATE TABLE IF NOT EXISTS expense_audit(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      expense_id INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      old_amount INTEGER NOT NULL,
+      new_amount INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      snapshot TEXT NOT NULL DEFAULT '',
+      occurred_at TEXT NOT NULL
+    )''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_expense_audit_item ON expense_audit(expense_id)');
+    final cols = (await db.rawQuery('PRAGMA table_info(expenses)'))
+        .map((row) => row['name'] as String).toSet();
+    const fields = <String, String>{
+      'category_id': 'INTEGER',
+      'payment_method': "TEXT NOT NULL DEFAULT 'Tunai'",
+      'note': "TEXT NOT NULL DEFAULT ''",
+      'updated_at': "TEXT NOT NULL DEFAULT ''",
+    };
+    for (final e in fields.entries) {
+      if (!cols.contains(e.key)) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN ${e.key} ${e.value}');
+      }
+    }
+    final defaults = ['Lainnya', 'Operasional', 'Sparepart', 'Listrik & Air',
+      'Internet & Pulsa', 'Transportasi', 'Sewa', 'Gaji', 'Peralatan', 'Lain-lain'];
+    for (final name in defaults) {
+      await db.rawInsert('INSERT OR IGNORE INTO expense_categories(name,archived,created_at) '
+        'VALUES (?,0,?)', [name, DateTime.now().toIso8601String()]);
+    }
   }
 
   // v11: tanggal bon per barang dan audit koreksi pembayaran.

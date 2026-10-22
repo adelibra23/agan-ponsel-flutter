@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'contact_picker.dart';
 import 'inventory.dart';
 import 'cash_screen.dart';
+import 'expenses_v2.dart';
 import 'store_notes.dart';
 import '../core/database.dart';
 import '../core/format.dart';
@@ -240,74 +241,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
   );
 }
 
-class ExpensesScreen extends StatefulWidget {
+/// Compatibility wrapper keeps existing menu routes stable.
+class ExpensesScreen extends StatelessWidget {
   const ExpensesScreen({super.key});
   @override
-  State<ExpensesScreen> createState() => _ExpensesScreenState();
-}
-
-class _ExpensesScreenState extends State<ExpensesScreen> {
-  late Future<List<Map<String, Object?>>> loader;
-  @override
-  void initState() { super.initState(); refresh(); }
-  void refresh() => setState(() => loader = AppDatabase.instance.then((d) => d.query('expenses', orderBy: 'id DESC')));
-
-  Future<void> add() async {
-    final desc = TextEditingController();
-    final amount = TextEditingController();
-    final result = await showAppSheet<bool>(context, Column(
-      mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('Catat Pengeluaran', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
-        TextField(controller: desc, decoration: inputDecoration('Keterangan pengeluaran')),
-        const SizedBox(height: 10),
-        TextField(controller: amount, keyboardType: TextInputType.number,
-          decoration: inputDecoration('Nominal pengeluaran (Rp)')),
-        const SizedBox(height: 16),
-        FilledButton(onPressed: () {
-          if (desc.text.trim().isEmpty || nonNegative(amount.text) == null || nonNegative(amount.text) == 0) {
-            notify(context, 'Isi keterangan dan nominal yang benar'); return;
-          }
-          Navigator.pop(context, true);
-        }, child: const Text('Simpan Pengeluaran')),
-      ]));
-    if (result == true) {
-      await (await AppDatabase.instance).insert('expenses', {
-        'description': desc.text.trim(), 'amount': nonNegative(amount.text)!,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-      if (mounted) refresh();
-    }
-    desc.dispose(); amount.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => StorePage(title: 'Pengeluaran',
-    action: IconButton(onPressed: add, icon: const Icon(Icons.add_circle_outline_rounded)),
-    child: FutureBuilder<List<Map<String, Object?>>>(future: loader, builder: (ctx, snap) {
-      if (snap.hasError) return EmptyView(icon: Icons.error_outline, title: 'Gagal memuat pengeluaran', subtitle: '${snap.error}');
-      if (!snap.hasData) return const ScreenLoading();
-      final data = snap.data!;
-      return ListView(key: const PageStorageKey('expenses-list-scroll'), padding: const EdgeInsets.all(16), children: [
-        Surface(child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text('Total pengeluaran', style: TextStyle(fontWeight: FontWeight.w700)),
-          Text(rupiah(data.fold<int>(0, (a, b) => a + (b['amount'] as int))),
-            style: const TextStyle(color: Color(0xFFE4545A), fontWeight: FontWeight.w900)),
-        ])),
-        const SizedBox(height: 14),
-        if (data.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 90),
-          child: EmptyView(icon: Icons.payments_outlined, title: 'Belum ada pengeluaran', subtitle: 'Tekan tombol + di kanan atas.')),
-        for (final row in data) ...[
-          Surface(child: ListTile(contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.receipt_long_rounded, color: Color(0xFFE4545A)),
-            title: Text('${row['description']}', style: const TextStyle(fontWeight: FontWeight.w800)),
-            subtitle: Text(dateLabel(row['created_at'] as String)),
-            trailing: Text(rupiah(row['amount'] as int), style: const TextStyle(fontWeight: FontWeight.w800)))),
-          const SizedBox(height: 9),
-        ],
-      ]);
-    }),
-  );
+  Widget build(BuildContext context) => const ExpensesManagementScreen();
 }
 
 class DigitalScreen extends StatefulWidget {

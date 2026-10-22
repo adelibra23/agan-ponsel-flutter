@@ -62,6 +62,8 @@ class _OrbitPainter extends CustomPainter {
   bool shouldRepaint(covariant _OrbitPainter oldDelegate) => false;
 }
 
+/// Minimal one-row header: no repeated slogan, decorative rings or duplicate
+/// section banners. Search/scan/AI remain available through the quick menu.
 class BrandHeader extends StatelessWidget {
   final String section;
   final String subheading;
@@ -70,71 +72,58 @@ class BrandHeader extends StatelessWidget {
   final VoidCallback onAlerts;
   final VoidCallback onScan;
   final VoidCallback onAgent;
-  const BrandHeader({super.key, required this.section, required this.subheading, required this.template,
-    required this.onSearch, required this.onAlerts, required this.onScan, required this.onAgent});
+  const BrandHeader({super.key, required this.section, required this.subheading,
+    required this.template, required this.onSearch, required this.onAlerts,
+    required this.onScan, required this.onAgent});
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: templateGradient(template)),
-      borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
-    ),
-    child: Stack(children: [
-      Positioned(right: -50, top: -88, child: Container(height: 188, width: 188,
-        decoration: BoxDecoration(shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(.12), width: 31)))),
-      Positioned(right: 82, bottom: -65, child: Container(height: 138, width: 138,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: brandCyan.withOpacity(.11)))),
-      Padding(padding: const EdgeInsets.fromLTRB(15, 12, 12, 13), child: Column(children: [
-        Row(children: [
-          const StoreLogo(size: 46),
-          const SizedBox(width: 10),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-              child: Text('AGAN PONSEL', style: TextStyle(color: Colors.white,
-                fontWeight: FontWeight.w900, letterSpacing: -.65, fontSize: 20))),
-            const SizedBox(height: 4),
-            const Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.circle, size: 6, color: Color(0xFF5BFFBD)),
-              SizedBox(width: 5),
-              Text('TOKO DIGITAL • AGAN PONSEL', style: TextStyle(color: Colors.white70,
-                fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .45)),
-            ]),
-          ])),
-          _HeaderButton(icon: Icons.auto_awesome_rounded, onPressed: onAgent),
-          const SizedBox(width: 2),
-          _HeaderButton(icon: Icons.qr_code_scanner_rounded, onPressed: onScan),
-          const SizedBox(width: 2),
-          if (MediaQuery.sizeOf(context).width >= 395)
-            _HeaderButton(icon: Icons.search_rounded, onPressed: onSearch),
-          const SizedBox(width: 2),
-          FutureBuilder<ReceivableSummary>(
-            future: ReceivablesService.summary(), builder: (context, snap) {
-              final count = snap.data?.alertCount ?? 0;
-              return Badge(
-                isLabelVisible: count > 0,
-                label: Text(count > 99 ? '99+' : '$count'),
-                child: _HeaderButton(icon: Icons.notifications_none_rounded, onPressed: onAlerts),
-              );
-            }),
-        ]),
-        const SizedBox(height: 12),
-        Row(children: [
-          Container(width: 4, height: 17, decoration: BoxDecoration(
-            color: brandCyan, borderRadius: BorderRadius.circular(10))),
-          const SizedBox(width: 9),
-          Expanded(child: AnimatedSwitcher(duration: const Duration(milliseconds: 240),
-            child: Text(section == 'Beranda' ? 'Dashboard • Kasir • Service • Inventaris' : subheading,
-              key: ValueKey(section), style: const TextStyle(color: Colors.white,
-                fontSize: 12, fontWeight: FontWeight.w700)))),
-          const Icon(Icons.shield_rounded, color: Color(0xFF83F4DA), size: 15),
-          const SizedBox(width: 4),
-          const Text('Data lokal', style: TextStyle(fontSize: 10, color: Colors.white70)),
-        ]),
-      ])),
-    ]),
-  );
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 65,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant.withValues(alpha: .75))),
+      ),
+      child: Row(children: [
+        const StoreLogo(size: 36),
+        const SizedBox(width: 11),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text('AGAN PONSEL', maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: scheme.onSurface, fontSize: 16,
+              fontWeight: FontWeight.w900, letterSpacing: -.3)),
+          Text(section, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 11)),
+        ])),
+        IconButton(icon: const Icon(Icons.search_rounded), tooltip: 'Cari produk',
+          onPressed: onSearch),
+        FutureBuilder<ReceivableSummary>(
+          future: ReceivablesService.summary(), builder: (ctx, snap) {
+            final n = snap.data?.alertCount ?? 0;
+            return Badge(isLabelVisible: n > 0, label: Text(n > 99 ? '99+' : '$n'),
+              child: IconButton(tooltip: 'Notifikasi jatuh tempo',
+                onPressed: onAlerts, icon: const Icon(Icons.notifications_none_rounded)));
+          }),
+        PopupMenuButton<String>(tooltip: 'Aksi cepat',
+          icon: const Icon(Icons.more_vert_rounded),
+          onSelected: (value) {
+            if (value == 'scan') onScan();
+            if (value == 'ai') onAgent();
+            if (value == 'search') onSearch();
+          },
+          itemBuilder: (ctx) => const [
+            PopupMenuItem(value: 'scan', child: ListTile(
+              contentPadding: EdgeInsets.zero, leading: Icon(Icons.qr_code_scanner_rounded),
+              title: Text('Scan Barcode'))),
+            PopupMenuItem(value: 'ai', child: ListTile(
+              contentPadding: EdgeInsets.zero, leading: Icon(Icons.auto_awesome_rounded),
+              title: Text('AGANA AI'))),
+          ]),
+      ]),
+    );
+  }
 }
 
 class _HeaderButton extends StatelessWidget {
