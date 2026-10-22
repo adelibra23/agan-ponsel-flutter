@@ -40,10 +40,16 @@ backup = (root / 'lib/services/backup_service.dart').read_text()
 assert "'receivable_items'" in backup
 backup_schema = re.search(r"'databaseVersion':\s*(\d+)", backup)
 assert backup_schema and int(backup_schema.group(1)) >= 9, 'Backup must support migration v9'
+# dart format can wrap the list, `.contains(` call and its argument.
+# Preserve the assertion on *actual* restore-compatible database versions.
 supported_versions = re.search(
-    r"\[([0-9,\s]+)\]\.contains\(payload\['databaseVersion'\]\)", backup)
+    r"\[\s*([0-9,\s]+?)\s*\]\s*\.contains\s*\(\s*"
+    r"payload\s*\[\s*'databaseVersion'\s*\]\s*,?\s*\)",
+    backup,
+    flags=re.S,
+)
 assert supported_versions, 'Backup must declare allowed legacy database versions'
-supported = {int(value.strip()) for value in supported_versions.group(1).split(',')}
-assert set(range(4, 10)).issubset(supported), 'Missing legacy version in restore whitelist'
+supported = {int(value.strip()) for value in supported_versions.group(1).split(',') if value.strip()}
+assert set(range(4, int(db_schema.group(1)) + 1)).issubset(supported), 'Missing legacy/current version in restore whitelist'
 assert backup.index("'receivables'") < backup.index("'receivable_items'")
 print('OK: SQLite v9 item detail migration, legacy debt and payments preserved')
