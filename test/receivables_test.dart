@@ -17,10 +17,17 @@ void main() {
     expect(reminderText(item, 'Formal'), contains('AGAN PONSEL'));
   });
 
-  test('Template palettes defined for four styles', () {
-    expect(appTemplates.length, 4);
+  test('Template palettes defined for eight Build24 styles', () {
+    const requiredTemplates = [
+      'Biru Orbit', 'Midnight', 'Emerald', 'Sunset',
+      'Ocean', 'Rose Quartz', 'Graphite', 'Golden',
+    ];
+    expect(appTemplates, containsAll(requiredTemplates));
+    expect(appTemplates.length, greaterThanOrEqualTo(8));
+    expect(appTemplates.toSet().length, appTemplates.length);
     for (final template in appTemplates) {
-      expect(templateGradient(template).length, 3);
+      expect(templateGradient(template).length, 3,
+        reason: 'Tema $template harus memiliki 3 warna gradien.');
     }
   });
 }
