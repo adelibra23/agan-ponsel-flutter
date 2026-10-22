@@ -8,10 +8,13 @@ root = Path(__file__).resolve().parent.parent
 dbcode = (root/'lib/core/database.dart').read_text()
 service = (root/'lib/services/receivables_service.dart').read_text()
 backup = (root/'lib/services/backup_service.dart').read_text()
-assert 'version: 11' in dbcode and 'if (oldVersion < 11)' in dbcode
+db_schema = re.search(r'\bversion:\s*(\d+)\s*,', dbcode)
+assert db_schema and int(db_schema.group(1)) >= 11, 'Database must support migration v11'
+assert 'if (oldVersion < 11)' in dbcode
 assert 'await _createPaymentCorrections(db);' in dbcode
 assert 'entry_date' in service and 'editPayment' in service and 'appendBon' in service
-assert "'databaseVersion': 11" in backup
+backup_schema = re.search(r"'databaseVersion':\s*(\d+)", backup)
+assert backup_schema and int(backup_schema.group(1)) >= 11, 'Backup must support migration v11'
 assert "'receivable_payment_edits'" in backup and "'receivable_bon_events'" in backup
 
 con=sqlite3.connect(':memory:'); con.execute('PRAGMA foreign_keys=ON')

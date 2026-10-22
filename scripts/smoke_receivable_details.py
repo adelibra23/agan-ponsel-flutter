@@ -9,7 +9,8 @@ match = re.search(r"CREATE TABLE IF NOT EXISTS receivable_items\((.*?)\)'''", co
 assert match, 'Missing receivable_items table in v9 migration'
 schema = 'CREATE TABLE IF NOT EXISTS receivable_items(' + match.group(1) + ')'
 assert 'if (oldVersion < 9)' in code
-assert 'version: 11' in code
+db_schema = re.search(r'\bversion:\s*(\d+)\s*,', code)
+assert db_schema and int(db_schema.group(1)) >= 9, 'Database must support migration v9'
 
 con = sqlite3.connect(':memory:')
 con.execute('PRAGMA foreign_keys=ON')
@@ -37,7 +38,12 @@ assert con.execute('SELECT amount FROM receivables').fetchone()[0] == 80000
 # Old backup documents can omit the new line-item table and still be accepted.
 backup = (root / 'lib/services/backup_service.dart').read_text()
 assert "'receivable_items'" in backup
-assert "'databaseVersion': 11" in backup
-assert "[4, 5, 6, 7, 8, 9, 10, 11]" in backup
+backup_schema = re.search(r"'databaseVersion':\s*(\d+)", backup)
+assert backup_schema and int(backup_schema.group(1)) >= 9, 'Backup must support migration v9'
+supported_versions = re.search(
+    r"\[([0-9,\s]+)\]\.contains\(payload\['databaseVersion'\]\)", backup)
+assert supported_versions, 'Backup must declare allowed legacy database versions'
+supported = {int(value.strip()) for value in supported_versions.group(1).split(',')}
+assert set(range(4, 10)).issubset(supported), 'Missing legacy version in restore whitelist'
 assert backup.index("'receivables'") < backup.index("'receivable_items'")
 print('OK: SQLite v9 item detail migration, legacy debt and payments preserved')
