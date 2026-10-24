@@ -430,7 +430,7 @@ class _RestockDetailScreenState extends State<RestockDetailScreen> {
   }
 
   Future<void> complete({required bool receive}) async {
-    final approved = await showDialog<bool>(context, builder: (ctx) => AlertDialog(
+    final approved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: Text(receive ? 'Konfirmasi Barang Diterima?' : 'Batalkan Rencana?'),
       content: Text(receive
         ? 'Stok produk akan bertambah sesuai jumlah barang pada rencana. '
