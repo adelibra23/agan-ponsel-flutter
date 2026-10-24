@@ -1,6 +1,7 @@
 """Tests v9->v10 migration for receipt event logging without a Flutter SDK."""
 from pathlib import Path
 import re
+from backup_compat_check import assert_backup_versions
 import sqlite3
 
 root = Path(__file__).resolve().parent.parent
@@ -24,11 +25,8 @@ backup = (root / 'lib/services/backup_service.dart').read_text()
 assert "'receivable_receipt_events'" in backup
 backup_schema = re.search(r"'databaseVersion':\s*(\d+)", backup)
 assert backup_schema and int(backup_schema.group(1)) >= 10, 'Backup must support migration v10'
-supported_versions = re.search(
-    r"\[([0-9,\s]+)\]\.contains\(payload\['databaseVersion'\]\)", backup)
-assert supported_versions, 'Backup must declare allowed legacy database versions'
-supported = {int(value.strip()) for value in supported_versions.group(1).split(',')}
-assert set(range(4, 11)).issubset(supported), 'Missing legacy version in restore whitelist'
+current_schema = int(db_schema.group(1))
+assert_backup_versions(backup, minimum=10, current=current_schema)
 assert backup.index("'receivable_items'") < backup.index("'receivable_receipt_events'")
 assert "'receivable_receipt_template'" in backup
 print('OK: SQLite v10 receipt log, preservation and backup compatibility')

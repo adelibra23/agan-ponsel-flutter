@@ -5,23 +5,21 @@ compilation or printer/WhatsApp device verification.
 """
 from pathlib import Path
 import re
+from backup_compat_check import assert_backup_versions
 import sqlite3
 
 root = Path(__file__).resolve().parent.parent
 code = (root/'lib/core/database.dart').read_text()
 backup = (root/'lib/services/backup_service.dart').read_text()
-assert re.search(r'\bversion:\s*14\s*,', code)
+found = re.search(r'\bversion:\s*(\d+)\s*,', code)
+assert found and int(found.group(1)) >= 14, 'SQLite schema must support v14+'
 assert 'if (oldVersion < 14)' in code
 assert code.count('await _createRestockV14(db);') == 3
-assert "'databaseVersion': 14" in backup
 for name in ['suppliers','restock_orders','restock_order_items']:
     assert f"'{name}'" in backup
 assert backup.index("'suppliers'") < backup.index("'restock_orders'") < backup.index("'restock_order_items'")
 
-whitelist = re.search(r"\[([0-9,\s]+)\]\.contains\(payload\['databaseVersion'\]\)", backup, flags=re.S)
-assert whitelist, 'Backup restore whitelist unavailable'
-versions = {int(v.strip()) for v in whitelist.group(1).split(',')}
-assert set(range(4,15)).issubset(versions), 'Legacy backup v4-v14 must remain accepted'
+assert_backup_versions(backup, minimum=14, current=int(found.group(1)))
 
 section = code.split('static Future<void> _createRestockV14',1)[1].split('  /// v13:',1)[0]
 tables = re.findall(r"db\.execute\('''(CREATE TABLE IF NOT EXISTS .*?)'''\)", section, flags=re.S)

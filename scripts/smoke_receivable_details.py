@@ -1,5 +1,6 @@
 """Smoke migration 8->9, sample payments, backup table order, without Flutter SDK."""
 import re
+from backup_compat_check import assert_backup_versions
 import sqlite3
 from pathlib import Path
 
@@ -40,10 +41,7 @@ backup = (root / 'lib/services/backup_service.dart').read_text()
 assert "'receivable_items'" in backup
 backup_schema = re.search(r"'databaseVersion':\s*(\d+)", backup)
 assert backup_schema and int(backup_schema.group(1)) >= 9, 'Backup must support migration v9'
-supported_versions = re.search(
-    r"\[([0-9,\s]+)\]\.contains\(payload\['databaseVersion'\]\)", backup)
-assert supported_versions, 'Backup must declare allowed legacy database versions'
-supported = {int(value.strip()) for value in supported_versions.group(1).split(',')}
-assert set(range(4, 10)).issubset(supported), 'Missing legacy version in restore whitelist'
+current_schema = int(db_schema.group(1))
+assert_backup_versions(backup, minimum=9, current=current_schema)
 assert backup.index("'receivables'") < backup.index("'receivable_items'")
 print('OK: SQLite v9 item detail migration, legacy debt and payments preserved')
