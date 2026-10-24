@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../core/format.dart';
 import '../services/expenses_service.dart';
+import 'expense_insights.dart';
 
 /// Icon set deliberately whitelisted: the database stores stable keys, never
 /// icon code points which might change between Flutter releases.
@@ -80,6 +81,16 @@ class _ExpensesManagementScreenState extends State<ExpensesManagementScreen> {
     refresh();
   }
 
+  Future<void> openInsights() async {
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (_) => ExpenseInsightsScreen(onRepeat: (source) async {
+        final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+          builder: (_) => ExpenseEditorPage(copyFrom: source)));
+        return saved == true;
+      })));
+    if (mounted) refresh();
+  }
+
   String csvCell(Object? value) => '"${(value ?? '').toString().replaceAll('"', '""')}"';
   Future<void> exportCsv(List<ExpenseEntry> shown) async {
     try {
@@ -101,6 +112,8 @@ class _ExpensesManagementScreenState extends State<ExpensesManagementScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Pengeluaran'), actions: [
+      IconButton(tooltip: 'Insight & Anggaran',
+        icon: const Icon(Icons.insights_rounded), onPressed: openInsights),
       IconButton(tooltip: 'Riwayat audit', icon: const Icon(Icons.history),
         onPressed: () => Navigator.push<void>(context,
           MaterialPageRoute(builder: (_) => const ExpenseAuditPage()))),
@@ -132,6 +145,10 @@ class _ExpensesManagementScreenState extends State<ExpensesManagementScreen> {
               style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ])),
         const SizedBox(height: 14),
+        OutlinedButton.icon(onPressed: openInsights,
+          icon: const Icon(Icons.insights_rounded),
+          label: const Text('Insight, Anggaran & Pengeluaran Favorit')),
+        const SizedBox(height: 12),
         TextField(onChanged: (v) => setState(() => search = v),
           decoration: InputDecoration(prefixIcon: const Icon(Icons.search),
             hintText: 'Cari pengeluaran atau catatan',

@@ -11,9 +11,9 @@ root = Path(__file__).resolve().parent.parent
 source = (root / 'lib/core/database.dart').read_text()
 service = (root / 'lib/services/expenses_service.dart').read_text()
 backup = (root / 'lib/services/backup_service.dart').read_text()
-assert 'version: 13' in source
+assert 'version: 14' in source
 assert 'if (oldVersion < 13)' in source
-assert "'databaseVersion': 13" in backup
+assert "'databaseVersion': 14" in backup
 assert '10, 11, 12, 13' in backup
 assert 'unitPrice' in service and 'colorValue' in service
 assert 'UPDATE expenses SET unit_price=amount' in source

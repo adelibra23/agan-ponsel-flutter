@@ -25,6 +25,7 @@ class BackupService {
     'digital_transactions', 'receipts', 'receipt_items',
     'stock_movements', 'service_events', 'cash_adjustments', 'store_notes', 'receivables', 'receivable_payments', 'agent_activity', 'receivable_items', 'receivable_receipt_events',
     'receivable_payment_edits', 'receivable_bon_events',
+    'suppliers', 'restock_orders', 'restock_order_items',
   ];
   static const requiredTables = <String>{
     'products', 'sales', 'services', 'customers', 'expenses',
@@ -34,6 +35,7 @@ class BackupService {
     'local_owner_name', 'local_owner_phone', 'local_owner_email',
     'local_shop_name', 'local_shop_address', 'local_receipt_footer',
     'daily_sales_target', 'app_template_style', 'app_font_family', 'reminder_message_template',
+    'expense_budget_settings',
     'receivable_receipt_template',
   ];
 
@@ -68,7 +70,7 @@ class BackupService {
     return <String, dynamic>{
       'format': 'agan-ponsel-sqlite-json',
       'formatVersion': 3,
-      'databaseVersion': 13,
+      'databaseVersion': 14,
       'createdAt': DateTime.now().toIso8601String(),
       'tables': records,
       'media': media,
@@ -133,7 +135,7 @@ class BackupService {
     if (payload['format'] != 'agan-ponsel-sqlite-json' || ![1, 2, 3].contains(payload['formatVersion'])) {
       throw const FormatException('Format atau versi backup tidak didukung');
     }
-    if (![4, 5, 6, 7, 8, 9, 10, 11, 12, 13].contains(payload['databaseVersion'])) {
+    if (![4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].contains(payload['databaseVersion'])) {
       throw const FormatException('Backup memerlukan versi database yang berbeda');
     }
     final rawTables = payload['tables'];

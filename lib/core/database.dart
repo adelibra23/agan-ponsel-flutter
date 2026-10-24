@@ -90,7 +90,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 13,
+      version: 14,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
@@ -104,6 +104,7 @@ class AppDatabase {
         await _createPaymentCorrections(db);
         await _createExpensesV12(db);
         await _createExpensesV13(db);
+        await _createRestockV14(db);
       },
       // Menolong instalasi yang sebelumnya memiliki migrasi parsial.
       onOpen: (db) async {
@@ -120,6 +121,7 @@ class AppDatabase {
         await _createPaymentCorrections(db);
         await _createExpensesV12(db);
         await _createExpensesV13(db);
+        await _createRestockV14(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -159,8 +161,49 @@ class AppDatabase {
         if (oldVersion < 13) {
           await _createExpensesV13(db);
         }
+        if (oldVersion < 14) {
+          await _createRestockV14(db);
+        }
       },
     );
+  }
+
+  // AGAN_PONSEL_RESTOCK_V14
+  /// v14: purchase planning, supplier contacts, stock receipt history.
+  /// New tables only; preexisting products, sales and cash never reset.
+  static Future<void> _createRestockV14(DatabaseExecutor db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS suppliers(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      phone TEXT NOT NULL DEFAULT '',
+      address TEXT NOT NULL DEFAULT '',
+      note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )''');
+    await db.execute('''CREATE TABLE IF NOT EXISTS restock_orders(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supplier_id INTEGER,
+      status TEXT NOT NULL DEFAULT 'draft',
+      notes TEXT NOT NULL DEFAULT '',
+      estimated_total INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      received_at TEXT NOT NULL DEFAULT '',
+      FOREIGN KEY(supplier_id) REFERENCES suppliers(id)
+    )''');
+    await db.execute('''CREATE TABLE IF NOT EXISTS restock_order_items(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      product_name TEXT NOT NULL,
+      qty INTEGER NOT NULL CHECK(qty > 0),
+      unit_cost INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY(order_id) REFERENCES restock_orders(id)
+    )''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_restock_orders_status '
+      'ON restock_orders(status, id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_restock_order_items_parent '
+      'ON restock_order_items(order_id)');
   }
 
   /// v13: richer expense details + category visual metadata. All operations are

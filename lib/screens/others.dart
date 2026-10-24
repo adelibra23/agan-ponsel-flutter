@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'contact_picker.dart';
 import 'inventory.dart';
+import 'restock_center.dart';
 import 'cash_screen.dart';
 import 'expenses_v2.dart';
 import 'store_notes.dart';
@@ -61,6 +62,10 @@ class MoreScreen extends StatelessWidget {
       _MenuItem(icon: Icons.notification_important_outlined, color: const Color(0xFFDD8517),
         title: 'Stok Menipis', subtitle: 'Pantau produk di bawah batas minimum',
         onTap: () => open(const InventoryScreen(lowOnly: true))),
+      _MenuItem(icon: Icons.local_shipping_rounded, color: const Color(0xFF008D83),
+        title: 'Restock & Supplier',
+        subtitle: 'Rencana belanja, kontak pemasok dan konfirmasi barang masuk',
+        onTap: () => open(const RestockCenterScreen())),
       _MenuItem(icon: Icons.sim_card_rounded, color: const Color(0xFF0D87CF),
         title: 'Pulsa & Transaksi Digital', subtitle: 'Catat paket data, top up, admin', onTap: () => open(const DigitalScreen())),
       _MenuItem(icon: Icons.payments_rounded, color: const Color(0xFFE76655),
