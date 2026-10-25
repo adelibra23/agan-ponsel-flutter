@@ -36,9 +36,9 @@ checks = {
     "'digital_events'", "'databaseVersion': 15",
     "'expense_budget_settings'", "'restock_order_items'",
   ],
-  'pubspec.yaml':['version: 1.8.0+28', 'shared_preferences_android: 2.4.28'],
+  'pubspec.yaml':[ 'shared_preferences_android: 2.4.28'],
   '.github/workflows/build-apk.yml':[
-    'AGAN-PONSEL-v1.8.0-Build28-APK',
+    
     'scripts/smoke_operations_v15.py',
     'test/build28_store_plus_test.dart',
     'Test WhatsApp Agent Webhook',
@@ -57,3 +57,11 @@ db = Path('lib/core/database.dart').read_text()
 assert db.count('await _createOperationsV15(db);') == 3
 assert re.search(r'\bversion:\s*15\s*,', db)
 print('OK: Build28 Catatan, Kas, Laporan, Digital, Produk and Build27 integrations')
+
+
+# BUILD29_FORWARD_COMPATIBLE_GUARD_28
+# Minimum release compatibility; future APK releases remain valid.
+_version29 = re.search(r'(?m)^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)',
+    Path('pubspec.yaml').read_text())
+assert _version29, 'AGAN PONSEL version missing'
+assert tuple(map(int, _version29.groups())) >= (1, 8, 0, 28), 'Requires Build28 or newer'

@@ -15,8 +15,8 @@ required={
  'lib/services/backup_service.dart': ["'databaseVersion': 15",
    "'suppliers'", "'restock_orders'", "'restock_order_items'",
    "'expense_budget_settings'"],
- 'pubspec.yaml':['version: 1.8.0+28', 'shared_preferences_android: 2.4.28'],
- '.github/workflows/build-apk.yml': ['AGAN-PONSEL-v1.8.0-Build28-APK',
+ 'pubspec.yaml':[ 'shared_preferences_android: 2.4.28'],
+ '.github/workflows/build-apk.yml': [
    'test/build27_restock_test.dart', 'scripts/smoke_restock_v14.py',
    'test/build26_insights_test.dart', 'Test WhatsApp Agent Webhook'],
 }
@@ -31,3 +31,11 @@ assert len(re.findall(r'await _createRestockV14\(db\);',db))==3
 assert Path('lib/screens/expenses_v2.dart').exists(), 'Build25 expenses lost'
 assert Path('lib/screens/expense_insights.dart').exists(), 'Build26 insights lost'
 print('OK: Build27 Restock & Supplier integrated, Build21-26 features preserved')
+
+
+# BUILD29_FORWARD_COMPATIBLE_GUARD_27
+# Minimum release compatibility; future APK releases remain valid.
+_version29 = re.search(r'(?m)^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)',
+    Path('pubspec.yaml').read_text())
+assert _version29, 'AGAN PONSEL version missing'
+assert tuple(map(int, _version29.groups())) >= (1, 7, 0, 27), 'Requires Build27 or newer'

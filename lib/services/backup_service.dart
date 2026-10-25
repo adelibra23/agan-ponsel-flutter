@@ -37,6 +37,7 @@ class BackupService {
     'local_shop_name', 'local_shop_address', 'local_receipt_footer',
     'daily_sales_target', 'app_template_style', 'app_font_family', 'reminder_message_template',
     'expense_budget_settings',
+    'cash_card_style', 'cash_card_density',
     'receivable_receipt_template',
   ];
 

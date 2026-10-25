@@ -5,6 +5,7 @@ import 'restock_center.dart';
 import 'digital_plus.dart';
 import 'store_finance_plus.dart';
 import 'cash_screen.dart';
+import 'settings/cash_card_settings.dart';
 import 'expenses_v2.dart';
 import 'store_notes.dart';
 import '../core/database.dart';
@@ -59,6 +60,11 @@ class MoreScreen extends StatelessWidget {
         onTap: () => open(AppTemplatesScreen(currentStyle: template, onStyleChanged: onTemplateChanged))),
       _MenuItem(icon: Icons.account_balance_wallet_rounded, color: const Color(0xFF1F68D7),
         title: 'Saldo & Kas Toko', subtitle: 'Saldo kas, setoran dan penarikan manual', onTap: () => open(const CashScreen())),
+      _MenuItem(icon: Icons.credit_card_rounded,
+        color: const Color(0xFF6F66D1),
+        title: 'Pilihan Kartu Premium',
+        subtitle: 'Delapan desain kartu saldo, gaya ringkas dan privasi',
+        onTap: () => open(const CashCardSettingsScreen())),
       _MenuItem(icon: Icons.task_alt_rounded, color: const Color(0xFF4B78A8),
         title: 'Catatan & Tugas', subtitle: 'Edit, kategori, tenggat dan bagikan', onTap: () => open(const StoreNotesScreen())),
       _MenuItem(icon: Icons.notification_important_outlined, color: const Color(0xFFDD8517),
@@ -479,6 +485,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onTap: () => go(const CashScreen())),
       const SizedBox(height: 12),
       const SectionTitle('Penyimpanan & perangkat'),
+      SettingsCard(icon: Icons.style_rounded, color: const Color(0xFF7355C7),
+        title: 'Desain Kartu Saldo',
+        subtitle: 'Kartu premium, pilihan warna, ringkas dan visibilitas',
+        onTap: () => go(const CashCardSettingsScreen())),
       SettingsCard(icon: Icons.cloud_upload_rounded, color: const Color(0xFF1F77C6),
         title: 'Jadwal Backup Google Drive', subtitle: 'Cadangan otomatis lewat akun Google',
         onTap: () => go(const DriveBackupSettingsScreen())),

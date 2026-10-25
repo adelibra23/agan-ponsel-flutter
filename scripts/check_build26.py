@@ -7,8 +7,8 @@ checks = {
  'lib/screens/expense_insights.dart': ['class ExpenseInsightsScreen', 'class ExpenseBudgetScreen', 'Salin Ringkasan Bulanan', 'Sering dicatat'],
  'lib/screens/expenses_v2.dart': ["import 'expense_insights.dart';", 'openInsights()', 'Insight, Anggaran & Pengeluaran Favorit'],
  'lib/services/backup_service.dart': ["'expense_budget_settings'", "'databaseVersion': 15"],
- 'pubspec.yaml': ['version: 1.8.0+28', 'shared_preferences_android: 2.4.28'],
- '.github/workflows/build-apk.yml': ['test/build26_insights_test.dart', 'scripts/smoke_budget_backup.py', 'AGAN-PONSEL-v1.8.0-Build28-APK'],
+ 'pubspec.yaml': [ 'shared_preferences_android: 2.4.28'],
+ '.github/workflows/build-apk.yml': ['test/build26_insights_test.dart', 'scripts/smoke_budget_backup.py', ],
 }
 for path, keys in checks.items():
     text = (root / path).read_text()
@@ -16,3 +16,11 @@ for path, keys in checks.items():
         assert key in text, f'{path}: missing {key}'
 assert re.search(r'\bversion:\s*15\s*,', (root/'lib/core/database.dart').read_text()), 'SQLite schema version must be v14'
 print('OK: Build26 finance insights, budget backup, quick repeat, unchanged SQLite v14')
+
+
+# BUILD29_FORWARD_COMPATIBLE_GUARD_26
+# Minimum release compatibility; future APK releases remain valid.
+_version29 = re.search(r'(?m)^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)',
+    Path('pubspec.yaml').read_text())
+assert _version29, 'AGAN PONSEL version missing'
+assert tuple(map(int, _version29.groups())) >= (1, 6, 0, 26), 'Requires Build26 or newer'

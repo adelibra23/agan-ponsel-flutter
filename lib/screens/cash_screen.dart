@@ -7,100 +7,20 @@ import 'store_finance_plus.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
 import '../widgets/kit.dart';
+import '../widgets/premium_cash_card.dart';
+import 'settings/cash_card_settings.dart';
 
-/// Private, locally remembered balance visibility. It is NOT a bank balance.
-class BalanceCard extends StatefulWidget {
+// AGAN_PONSEL_PREMIUM_CASH_CARD_V29
+/// Existing public widget name retained for the dashboard and other callers.
+class BalanceCard extends StatelessWidget {
   final VoidCallback onOpen;
   const BalanceCard({super.key, required this.onOpen});
-  @override
-  State<BalanceCard> createState() => _BalanceCardState();
-}
-
-class _BalanceCardState extends State<BalanceCard> {
-  bool visible = false;
-  late Future<int> total;
 
   @override
-  void initState() {
-    super.initState();
-    total = AppDatabase.cashBalance();
-    loadVisibility();
-  }
-
-  Future<void> loadVisibility() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) setState(() => visible = prefs.getBool('cash_balance_visible') ?? false);
-  }
-
-  Future<void> toggle() async {
-    final next = !visible;
-    setState(() => visible = next);
-    await (await SharedPreferences.getInstance()).setBool('cash_balance_visible', next);
-    HapticFeedback.selectionClick();
-  }
-
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(25),
-    child: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFF0C1C52), Color(0xFF0754DC), Color(0xFF168DF0)])),
-      child: Stack(children: [
-        Positioned(top: -68, right: -36,
-          child: IgnorePointer(child: Container(width: 172, height: 172,
-            decoration: BoxDecoration(shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: .09), width: 30))))),
-        Positioned(bottom: -63, right: 54,
-          child: IgnorePointer(child: Container(width: 112, height: 112,
-            decoration: BoxDecoration(shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: .045))))),
-        Padding(padding: const EdgeInsets.fromLTRB(19, 16, 17, 14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Container(width: 36, height: 36,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: .15),
-                  borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.account_balance_wallet_rounded,
-                  color: Colors.white, size: 20)),
-              const SizedBox(width: 10),
-              const Expanded(child: Text('SALDO KAS TERCATAT',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800,
-                  fontSize: 11, letterSpacing: .6))),
-              IconButton(tooltip: visible ? 'Sembunyikan saldo' : 'Tampilkan saldo',
-                onPressed: toggle,
-                style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: .12)),
-                icon: Icon(visible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                  color: Colors.white, size: 21)),
-            ]),
-            const SizedBox(height: 11),
-            FutureBuilder<int>(future: total, builder: (context, snap) =>
-              AnimatedSwitcher(duration: const Duration(milliseconds: 260),
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation, child: child),
-                child: Text(visible
-                    ? (snap.hasError ? 'Saldo tidak tersedia'
-                        : snap.hasData ? rupiah(snap.data!) : 'Menghitung...')
-                    : 'Rp ••••••••',
-                  key: ValueKey('${visible}-${snap.data}'),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white,
-                    fontSize: 27, letterSpacing: -.8, fontWeight: FontWeight.w900)))),
-            const SizedBox(height: 9),
-            Row(children: [
-              const Expanded(child: Text('Buku kas • berdasarkan transaksi tercatat',
-                style: TextStyle(color: Color(0xFFDAECFF), fontSize: 10.5))),
-              TextButton.icon(onPressed: widget.onOpen,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 8)),
-                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                label: const Text('Lihat detail', style: TextStyle(fontSize: 11.5,
-                  fontWeight: FontWeight.w800))),
-            ]),
-          ])),
-      ]),
-    ),
+  Widget build(BuildContext context) => PremiumCashCard(
+    onOpen: onOpen,
+    onCustomize: () => Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (_) => const CashCardSettingsScreen())),
   );
 }
 
@@ -111,23 +31,16 @@ class CashScreen extends StatefulWidget {
 }
 
 class _CashScreenState extends State<CashScreen> {
-  late Future<int> balance;
   late Future<List<Map<String, Object?>>> entries;
-  bool visible = false;
 
   @override
-  void initState() { super.initState(); refresh(); loadPrefs(); }
-  void refresh() => setState(() {
-    balance = AppDatabase.cashBalance();
-    entries = AppDatabase.cashHistory();
-  });
-  Future<void> loadPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) setState(() => visible = prefs.getBool('cash_balance_visible') ?? false);
-  }
-  Future<void> toggle() async {
-    setState(() => visible = !visible);
-    await (await SharedPreferences.getInstance()).setBool('cash_balance_visible', visible);
+  void initState() { super.initState(); refresh(); }
+
+  void refresh() => setState(() => entries = AppDatabase.cashHistory());
+
+  void showAppearance() {
+    Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (_) => const CashCardSettingsScreen()));
   }
 
   Future<void> setDailyTarget() async {
@@ -196,27 +109,11 @@ class _CashScreenState extends State<CashScreen> {
         icon: const Icon(Icons.assessment_outlined)),
       IconButton(tooltip: 'Atur target omzet', onPressed: setDailyTarget,
         icon: const Icon(Icons.flag_outlined)),
+      IconButton(tooltip: 'Pilihan Kartu Premium', onPressed: showAppearance,
+        icon: const Icon(Icons.palette_outlined)),
     ]),
     body: ListView(padding: const EdgeInsets.all(16), children: [
-      Container(padding: const EdgeInsets.all(21),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(25),
-          gradient: const LinearGradient(colors: [Color(0xFF0E2B83), brandBlue, Color(0xFF0C9FE6)])),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('SALDO KAS LOKAL', style: TextStyle(fontWeight: FontWeight.w800,
-            fontSize: 11, letterSpacing: 1.3, color: Colors.white70)),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: FutureBuilder<int>(future: balance, builder: (ctx, snap) =>
-              Text(visible ? (snap.hasData ? rupiah(snap.data!) : 'Memuat...') : 'Rp ••••••••',
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white)))),
-            IconButton(onPressed: toggle,
-              icon: Icon(visible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                color: Colors.white)),
-          ]),
-          const SizedBox(height: 8),
-          const Text('Bukan saldo bank/e-wallet. Tidak tersinkron dengan transaksi eksternal.',
-            style: TextStyle(color: Colors.white70, fontSize: 11)),
-        ])),
+      PremiumCashCard(onCustomize: showAppearance),
       const SizedBox(height: 16),
       Row(children: [
         Expanded(child: FilledButton.icon(onPressed: () => adjust(true),
