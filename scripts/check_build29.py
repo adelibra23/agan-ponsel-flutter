@@ -29,9 +29,9 @@ checks = {
  'lib/services/backup_service.dart': [
    "'cash_card_style'", "'cash_card_density'", "'databaseVersion': 15",
  ],
- 'pubspec.yaml': ['version: 1.9.0+29', 'shared_preferences_android: 2.4.28'],
+ 'pubspec.yaml': ['version: 2.0.0+30', 'shared_preferences_android: 2.4.28'],
  '.github/workflows/build-apk.yml': [
-   'AGAN-PONSEL-v1.9.0-Build29-APK',
+   'AGAN-PONSEL-v2.0.0-Build30-APK',
    'scripts/smoke_cash_card_settings.py',
    'test/build29_cash_card_test.dart',
    'Test WhatsApp Agent Webhook',

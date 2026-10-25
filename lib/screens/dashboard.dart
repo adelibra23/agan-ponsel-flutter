@@ -11,7 +11,6 @@ import 'inventory.dart';
 import 'pos.dart';
 import 'others.dart';
 import 'receivables.dart';
-import '../services/receivables_service.dart';
 import 'agana_agent.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -54,12 +53,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 13),
         BalanceCard(onOpen: () => widget.open(const CashScreen())),
         const SizedBox(height: 12),
-        _DebtReminderCard(onOpen: () => widget.open(const ReminderCenterScreen()),
-          onAll: () => widget.open(const ReceivablesScreen())),
-        const SizedBox(height: 12),
+        // BUILD30_REMINDERS_PRIVATE: no due dates or outstanding debt amounts
+        // on the dashboard. Reminders remain available through the bell/menu.
         _DailyGoal(revenue: data['revenue']!),
         const SizedBox(height: 18),
-        const SectionTitle('Ringkasan hari ini', subtitle: 'Pantau performa toko secara langsung'),
+        const SectionTitle('Ringkasan Hari Ini', subtitle: 'Statistik real-time • visual dengan efek kedalaman'),
         GridView.count(
           shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10,
@@ -79,12 +77,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             QuickIcon(icon: Icons.point_of_sale_rounded, color: const Color(0xFF00AB73), label: 'Kasir', action: () => widget.navigate(1)),
             QuickIcon(icon: Icons.inventory_2_rounded, color: brandBlue, label: 'Produk', action: () => widget.navigate(2)),
-            QuickIcon(icon: Icons.build_circle_outlined, color: const Color(0xFFE66D13), label: 'Service', action: () => widget.navigate(3)),
-            QuickIcon(icon: Icons.smartphone_rounded, color: const Color(0xFF217FE9), label: 'Pulsa & Data', action: () => widget.open(const DigitalScreen())),
+            QuickIcon(icon: Icons.handyman_rounded, color: const Color(0xFFE66D13), label: 'Service', action: () => widget.navigate(3)),
+            QuickIcon(icon: Icons.sim_card_rounded, color: const Color(0xFF217FE9), label: 'Pulsa & Data', action: () => widget.open(const DigitalScreen())),
             QuickIcon(icon: Icons.people_alt_rounded, color: const Color(0xFF784CE8), label: 'Pelanggan', action: () => widget.open(const CustomersScreen())),
-            QuickIcon(icon: Icons.bar_chart_rounded, color: const Color(0xFF43867F), label: 'Laporan', action: () => widget.open(const ReportsScreen())),
+            QuickIcon(icon: Icons.analytics_rounded, color: const Color(0xFF43867F), label: 'Laporan', action: () => widget.open(const ReportsScreen())),
             QuickIcon(icon: Icons.payments_rounded, color: const Color(0xFFE65759), label: 'Pengeluaran', action: () => widget.open(const ExpensesScreen())),
-            QuickIcon(icon: Icons.account_balance_wallet_outlined, color: const Color(0xFF2256B3), label: 'Saldo Kas', action: () => widget.open(const CashScreen())),
+            QuickIcon(icon: Icons.account_balance_wallet_rounded, color: const Color(0xFF2256B3), label: 'Saldo Kas', action: () => widget.open(const CashScreen())),
             QuickIcon(icon: Icons.receipt_long_rounded, color: const Color(0xFFCB713E), label: 'Piutang', action: () => widget.open(const ReceivablesScreen())),
             QuickIcon(icon: Icons.task_alt_rounded, color: const Color(0xFF64758E), label: 'Tugas Toko', action: () => widget.open(const StoreNotesScreen())),
           ],
@@ -258,41 +256,6 @@ class _DailyGoal extends StatelessWidget {
         Text('${rupiah(revenue)} dari ${rupiah(target)}',
           style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600,
             color: palette.onSurfaceVariant)),
-      ]));
-    });
-}
-
-class _DebtReminderCard extends StatelessWidget {
-  final VoidCallback onOpen;
-  final VoidCallback onAll;
-  const _DebtReminderCard({required this.onOpen, required this.onAll});
-  @override
-  Widget build(BuildContext context) => FutureBuilder<ReceivableSummary>(
-    future: ReceivablesService.summary(), builder: (context, snap) {
-      if (!snap.hasData || snap.data!.openCount == 0) return const SizedBox.shrink();
-      final s = snap.data!;
-      final active = s.alertCount > 0;
-      final accent = active ? const Color(0xFFD88719) : Theme.of(context).colorScheme.primary;
-      return Surface(child: Column(children: [
-        Row(children: [
-          CircleAvatar(backgroundColor: accent.withValues(alpha: .12),
-            child: Icon(Icons.notifications_active_outlined, color: accent)),
-          const SizedBox(width: 10),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(active ? '${s.alertCount} pengingat jatuh tempo' : 'Piutang pelanggan',
-              style: const TextStyle(fontWeight: FontWeight.w900)),
-            const SizedBox(height: 3),
-            Text('${rupiah(s.totalOutstanding)} belum dibayar',
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          ])),
-          IconButton(tooltip: 'Lihat pengingat', onPressed: onOpen,
-            icon: const Icon(Icons.arrow_forward_ios_rounded, size: 17)),
-        ]),
-        if (active) ...[
-          const SizedBox(height: 8),
-          SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: onAll,
-            icon: const Icon(Icons.receipt_long_outlined), label: const Text('Kelola Piutang'))),
-        ],
       ]));
     });
 }

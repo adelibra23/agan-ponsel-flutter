@@ -113,6 +113,8 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
   final code = TextEditingController();
   bool busy = false;
   bool biometricsReady = false;
+  bool faceReady = false;
+  bool facePromptAttempted = false;
   String message = 'Masukkan PIN 6 digit untuk membuka aplikasi';
 
   @override
@@ -121,7 +123,16 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
     try {
       final enabled = await BiometricSecurity.isEnabled;
       final available = enabled && await BiometricSecurity.available;
-      if (mounted) setState(() => biometricsReady = available);
+      final face = available && await BiometricSecurity.facePreferred &&
+        await BiometricSecurity.faceAvailable;
+      if (!mounted) return;
+      setState(() { biometricsReady = available; faceReady = face; });
+      if (face && !facePromptAttempted) {
+        facePromptAttempted = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !busy) unlockBiometric();
+        });
+      }
     } catch (_) {
       // Biometric failure must never prevent PIN unlock.
       if (mounted) setState(() => biometricsReady = false);
@@ -191,8 +202,10 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
         if (biometricsReady) ...[
           const SizedBox(height: 10),
           OutlinedButton.icon(onPressed: busy ? null : unlockBiometric,
-            icon: const Icon(Icons.fingerprint_rounded),
-            label: const Text('Buka dengan Biometrik')),
+            icon: Icon(faceReady ? Icons.face_retouching_natural_rounded
+              : Icons.fingerprint_rounded),
+            label: Text(faceReady ? 'Verifikasi Wajah / Biometrik'
+              : 'Buka dengan Biometrik')),
         ],
         const SizedBox(height: 18),
         const Text('PIN lokal tidak mengenkripsi database maupun backup.\nJangan bagikan PIN dan simpan backup dengan aman.',
@@ -216,6 +229,9 @@ class _PinSettingsScreenState extends State<PinSettingsScreen> {
   bool busy = false;
   bool biometricsEnabled = false;
   bool biometricsAvailable = false;
+  // BUILD30_PIN_FACE_UI: face is optional, PIN is always the fallback.
+  bool faceAvailable = false;
+  bool facePreferred = false;
 
   @override
   void initState() { super.initState(); refresh(); }
@@ -223,8 +239,14 @@ class _PinSettingsScreenState extends State<PinSettingsScreen> {
     final value = await PinSecurity.enabled;
     final biometric = await BiometricSecurity.isEnabled;
     final available = await BiometricSecurity.available;
+    final face = await BiometricSecurity.faceAvailable;
+    final preferred = await BiometricSecurity.facePreferred;
     if (mounted) setState(() {
-      enabled = value; biometricsEnabled = biometric; biometricsAvailable = available;
+      enabled = value;
+      biometricsEnabled = biometric;
+      biometricsAvailable = available;
+      faceAvailable = face;
+      facePreferred = preferred;
     });
   }
   @override
@@ -248,6 +270,10 @@ class _PinSettingsScreenState extends State<PinSettingsScreen> {
       }
       if (!mounted) return;
       if (success) {
+        if (disable) {
+          await BiometricSecurity.disableFacePreference();
+          await BiometricSecurity.disable();
+        }
         oldPin.clear(); newPin.clear(); confirmPin.clear();
         await refresh();
         if (mounted) notify(context, disable ? 'PIN dinonaktifkan' : 'PIN keamanan berhasil disimpan');
@@ -267,11 +293,33 @@ class _PinSettingsScreenState extends State<PinSettingsScreen> {
         if (mounted) notify(context, result ? 'Biometrik diaktifkan' :
           'Verifikasi gagal. Pastikan PIN aktif dan biometrik disiapkan di Android.');
       } else {
+        await BiometricSecurity.disableFacePreference();
         await BiometricSecurity.disable();
         if (mounted) notify(context, 'Biometrik dinonaktifkan');
       }
       await refresh();
     } finally { if (mounted) setState(() => busy = false); }
+  }
+
+  Future<void> toggleFace(bool value) async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      if (value) {
+        final approved = await BiometricSecurity.enableFacePreference();
+        if (mounted) notify(context, approved
+          ? 'Prioritas wajah Android diaktifkan.'
+          : 'Wajah belum tersedia atau verifikasi dibatalkan. Gunakan PIN.');
+      } else {
+        await BiometricSecurity.disableFacePreference();
+        if (mounted) notify(context, 'Prioritas wajah dinonaktifkan');
+      }
+      await refresh();
+    } catch (e) {
+      if (mounted) notify(context, 'Tidak bisa mengubah pengaturan wajah: $e');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 
   Widget pinField(TextEditingController c, String title) => Padding(
@@ -320,6 +368,24 @@ class _PinSettingsScreenState extends State<PinSettingsScreen> {
         value: biometricsEnabled && enabled,
         onChanged: !enabled || !biometricsAvailable || busy ? null : toggleBiometrics,
       )),
+      const SizedBox(height: 12),
+      Surface(child: SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        secondary: const Icon(Icons.face_retouching_natural_rounded,
+          color: brandBlue),
+        title: const Text('Prioritaskan Scan Wajah Android',
+          style: TextStyle(fontWeight: FontWeight.w800)),
+        subtitle: Text(faceAvailable
+          ? 'Tampilkan prompt biometrik saat membuka kunci. '
+            'Android dapat menawarkan sensor lain; PIN selalu tersedia.'
+          : 'Face Unlock belum terdeteksi oleh API biometrik Android pada HP ini.'),
+        value: facePreferred && enabled && faceAvailable,
+        onChanged: !enabled || !faceAvailable || busy ? null : toggleFace,
+      )),
+      const SizedBox(height: 10),
+      const Surface(child: Text('Biometrik wajah mengikuti kemampuan sensor dan '
+        'kebijakan Android. Aplikasi tidak menyimpan foto wajah atau template '
+        'biometrik. Pastikan PIN aktif sebagai metode pemulihan.')),
       const SizedBox(height: 15),
       const Surface(child: Text('Keamanan: PIN disimpan sebagai hash dengan salt, dan 5 percobaan gagal akan menyebabkan jeda 30 detik. PIN hanya membatasi akses dari UI, tidak mengamankan data terhadap perangkat yang di-root atau backup yang disalin. Jika PIN lupa, pemulihan melalui aplikasi belum tersedia.')),
     ]),

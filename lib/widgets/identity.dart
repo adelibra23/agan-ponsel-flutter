@@ -141,53 +141,97 @@ class _HeaderButton extends StatelessWidget {
   );
 }
 
+// BUILD30_MOTION_BOTTOM: sliding selection capsule, spring icons, semantic labels.
+// All actual page states remain mounted in the existing IndexedStack.
 class AnimatedBottomBar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onSelected;
-  const AnimatedBottomBar({super.key, required this.index, required this.onSelected});
+  const AnimatedBottomBar({super.key, required this.index,
+    required this.onSelected});
+
   static const labels = ['Beranda', 'Kasir', 'Produk', 'Service', 'Lainnya'];
-  static const icons = [Icons.space_dashboard_outlined, Icons.point_of_sale_rounded,
-    Icons.inventory_2_outlined, Icons.build_outlined, Icons.grid_view_rounded];
-  static const selectedIcons = [Icons.space_dashboard_rounded, Icons.point_of_sale_rounded,
-    Icons.inventory_2_rounded, Icons.build_rounded, Icons.grid_view_rounded];
+  static const icons = [Icons.home_outlined, Icons.point_of_sale_outlined,
+    Icons.inventory_2_outlined, Icons.handyman_outlined,
+    Icons.apps_outlined];
+  static const selectedIcons = [Icons.home_rounded, Icons.point_of_sale_rounded,
+    Icons.inventory_2_rounded, Icons.handyman_rounded, Icons.apps_rounded];
+
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 10, 8, 7),
+      padding: const EdgeInsets.fromLTRB(9, 7, 9, 3),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.06), blurRadius: 20, offset: const Offset(0, -5))],
-      ),
-      child: SafeArea(top: false, child: Row(children: List.generate(labels.length, (i) {
-        final active = i == index;
-        return Expanded(child: InkWell(
-          onTap: () { HapticFeedback.selectionClick(); onSelected(i); },
-          borderRadius: BorderRadius.circular(18),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            AnimatedContainer(duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutCubic, height: 34, width: active ? 55 : 42,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: active ? LinearGradient(colors: [Theme.of(context).colorScheme.primary,
-                  Theme.of(context).colorScheme.primary.withValues(alpha: .8)]) : null,
-                color: active ? null : Colors.transparent,
-                boxShadow: active ? [BoxShadow(color: brandBlue.withOpacity(.22), blurRadius: 10, offset: const Offset(0, 4))] : null,
-              ),
-              child: AnimatedSwitcher(duration: const Duration(milliseconds: 200),
-                transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
-                child: Icon(active ? selectedIcons[i] : icons[i],
-                  key: ValueKey(active), size: 22,
-                  color: active ? Colors.white : (dark ? Colors.white60 : const Color(0xFF8894A7)))),
-            ),
-            const SizedBox(height: 4),
-            Text(labels[i], maxLines: 1, style: TextStyle(
-              fontSize: 10, fontWeight: active ? FontWeight.w900 : FontWeight.w600,
-              color: active ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant)),
-          ]),
-        ));
-      }))),
+        color: scheme.surface,
+        border: Border(top: BorderSide(
+          color: scheme.outlineVariant.withValues(alpha: .5))),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(
+          alpha: dark ? .20 : .06), blurRadius: 19,
+          offset: const Offset(0, -4))]),
+      child: SafeArea(top: false,
+        child: LayoutBuilder(builder: (context, constraints) {
+          final tabWidth = constraints.maxWidth / labels.length;
+          return SizedBox(height: 63, child: Stack(children: [
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 390),
+              curve: Curves.easeOutCubic,
+              left: index * tabWidth + (tabWidth - 54) / 2,
+              top: 3, width: 54, height: 35,
+              child: DecoratedBox(decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                gradient: LinearGradient(begin: Alignment.topLeft,
+                  end: Alignment.bottomRight, colors: [scheme.primary,
+                    Color.lerp(scheme.primary, scheme.secondary, .35)!]),
+                boxShadow: [BoxShadow(color: scheme.primary.withValues(alpha: .24),
+                  blurRadius: 13, offset: const Offset(0, 5))]))),
+            Row(children: List.generate(labels.length, (i) {
+              final active = i == index;
+              return Expanded(child: Semantics(
+                button: true, selected: active, label: labels[i],
+                child: InkWell(
+                  onTap: () {
+                    if (i != index) {
+                      HapticFeedback.selectionClick();
+                      onSelected(i);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(17),
+                  child: SizedBox(height: 63,
+                    child: Column(mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 39, child: Center(
+                          child: AnimatedScale(
+                            duration: const Duration(milliseconds: 310),
+                            curve: Curves.easeOutBack,
+                            scale: active ? 1.12 : .94,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              transitionBuilder: (child, animation) =>
+                                ScaleTransition(scale: animation,
+                                  child: FadeTransition(opacity: animation,
+                                    child: child)),
+                              child: Icon(active ? selectedIcons[i] : icons[i],
+                                key: ValueKey('$i-$active'), size: 22,
+                                color: active ? Colors.white
+                                  : scheme.onSurfaceVariant))),
+                        )),
+                        const SizedBox(height: 4),
+                        AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 250),
+                          style: TextStyle(fontSize: 10,
+                            fontWeight: active ? FontWeight.w900 : FontWeight.w600,
+                            color: active ? scheme.primary
+                              : scheme.onSurfaceVariant),
+                          child: Text(labels[i], maxLines: 1,
+                            overflow: TextOverflow.ellipsis)),
+                      ])),
+                  ),
+                ),
+              );
+            })),
+          ]));
+        })),
     );
   }
 }

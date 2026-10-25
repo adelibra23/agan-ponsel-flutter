@@ -99,36 +99,45 @@ class PageIntro extends StatelessWidget {
   );
 }
 
+/// Clean Material 3 shortcuts with softer glass depth and feedback.
 class QuickIcon extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String label;
   final VoidCallback action;
-  const QuickIcon({super.key, required this.icon, required this.color, required this.label, required this.action});
+  const QuickIcon({super.key, required this.icon, required this.color,
+    required this.label, required this.action});
+
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: action,
-    borderRadius: BorderRadius.circular(18),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 260),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(18)),
-          child: Icon(icon, color: color, size: 25),
-        ),
-        const SizedBox(height: 8),
-        Text(label, textAlign: TextAlign.center, maxLines: 2,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 11, fontWeight: FontWeight.w700)),
-      ]),
-    ),
-  );
+  Widget build(BuildContext context) {
+    return InkWell(onTap: action, borderRadius: BorderRadius.circular(20),
+      child: Padding(padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(children: [
+          Container(width: 55, height: 55,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(begin: Alignment.topLeft,
+                end: Alignment.bottomRight, colors: [
+                  color.withValues(alpha: .17),
+                  color.withValues(alpha: .055)]),
+              borderRadius: BorderRadius.circular(19),
+              border: Border.all(color: color.withValues(alpha: .15)),
+              boxShadow: [BoxShadow(color: color.withValues(alpha: .08),
+                blurRadius: 11, offset: const Offset(0, 5))]),
+            child: Icon(icon, color: color, size: 25)),
+          const SizedBox(height: 8),
+          Text(label, maxLines: 2, textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 11, fontWeight: FontWeight.w700)),
+        ])),
+    );
+  }
 }
 
 /// Dashboard metric card. Values always use the theme's onSurface color
 /// rather than the accent shade, so they stay readable in either mode.
+/// BUILD30_DEPTH_TILES: layered translucent surfaces and soft elevation.
+/// No tilt sensor, expensive continuous animation or altered financial data.
 class StatTile extends StatelessWidget {
   final String title;
   final String value;
@@ -139,39 +148,66 @@ class StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final tintedSurface = Color.alphaBlend(
-      color.withValues(alpha: dark ? .15 : .075), palette.surface);
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+    final base = Color.alphaBlend(
+      color.withValues(alpha: dark ? .20 : .10), scheme.surface);
+    final glow = Color.alphaBlend(
+      color.withValues(alpha: dark ? .11 : .06), scheme.surface);
+    return Semantics(label: '$title: $value', child: AnimatedContainer(
+      duration: const Duration(milliseconds: 360),
       curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
       decoration: BoxDecoration(
-        color: tintedSurface,
-        borderRadius: BorderRadius.circular(21),
-        border: Border.all(color: palette.outlineVariant.withValues(alpha: dark ? .7 : .65)),
+        gradient: LinearGradient(begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [scheme.surface, base, glow]),
+        borderRadius: BorderRadius.circular(23),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: .65)),
+        boxShadow: [
+          BoxShadow(color: color.withValues(alpha: dark ? .10 : .14),
+            blurRadius: 20, spreadRadius: -5, offset: const Offset(0, 10)),
+          BoxShadow(color: Colors.black.withValues(alpha: dark ? .16 : .045),
+            blurRadius: 8, spreadRadius: -3, offset: const Offset(0, 4)),
+        ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Row(children: [
-          Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: palette.onSurfaceVariant, fontSize: 11.7,
-              fontWeight: FontWeight.w700, height: 1.2))),
-          const SizedBox(width: 5),
-          Container(width: 34, height: 34,
-            decoration: BoxDecoration(
-              color: Color.alphaBlend(color.withValues(alpha: dark ? .20 : .13), palette.surface),
-              borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: dark ? palette.onSurface : color, size: 19)),
-        ]),
-        SizedBox(width: double.infinity, child: FittedBox(
-          alignment: Alignment.centerLeft, fit: BoxFit.scaleDown,
-          child: Text(value, maxLines: 1,
-            style: TextStyle(color: palette.onSurface, fontSize: 21,
-              fontWeight: FontWeight.w900, letterSpacing: -.65)))),
-      ]),
-    );
+      child: ClipRRect(borderRadius: BorderRadius.circular(22),
+        child: Stack(children: [
+          Positioned(right: -20, top: -27, child: Container(width: 103,
+            height: 103, decoration: BoxDecoration(shape: BoxShape.circle,
+              border: Border.all(color: color.withValues(alpha: .11), width: 17)))),
+          Positioned(left: 12, right: 12, top: 1,
+            child: Container(height: 1, color: Colors.white.withValues(
+              alpha: dark ? .12 : .75))),
+          Padding(padding: const EdgeInsets.fromLTRB(13, 12, 12, 12),
+            child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Expanded(child: Text(title, maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: scheme.onSurfaceVariant,
+                      fontSize: 11.5, fontWeight: FontWeight.w800,
+                      height: 1.15))),
+                  const SizedBox(width: 5),
+                  Container(width: 35, height: 35,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [color.withValues(alpha: .92),
+                          color.withValues(alpha: .72)]),
+                      borderRadius: BorderRadius.circular(13),
+                      boxShadow: [BoxShadow(color: color.withValues(alpha: .22),
+                        blurRadius: 8, offset: const Offset(0, 4))]),
+                    child: Icon(icon, color: Colors.white, size: 18)),
+                ]),
+                SizedBox(width: double.infinity,
+                  child: FittedBox(fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value, maxLines: 1,
+                      style: TextStyle(fontSize: 21, letterSpacing: -.6,
+                        color: scheme.onSurface, fontWeight: FontWeight.w900)))),
+              ])),
+        ])),
+    ));
   }
 }
 

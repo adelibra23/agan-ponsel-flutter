@@ -20,6 +20,35 @@ class BiometricSecurity {
     } catch (_) { return false; }
   }
 
+  // BUILD30_ANDROID_FACE_PREFERENCE: Android platform controls which sensor
+  // actually satisfies its prompt. No facial images/templates enter this app.
+  static const faceKey = 'local_face_preferred_v30';
+
+  static Future<bool> get faceAvailable async {
+    try {
+      if (!await _device.isDeviceSupported()) return false;
+      final types = await _device.getAvailableBiometrics();
+      return types.contains(BiometricType.face);
+    } catch (_) { return false; }
+  }
+
+  static Future<bool> get facePreferred async =>
+      (await SharedPreferences.getInstance()).getBool(faceKey) ?? false;
+
+  static Future<bool> enableFacePreference() async {
+    if (!await PinSecurity.enabled || !await faceAvailable) return false;
+    // Verify using the trusted Android biometric dialog before saving.
+    if (!await authenticate()) return false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, true);
+    return prefs.setBool(faceKey, true);
+  }
+
+  static Future<void> disableFacePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(faceKey, false);
+  }
+
   static Future<bool> authenticate() async {
     if (!await available) return false;
     try {
