@@ -83,7 +83,7 @@ class _DigitalPlusScreenState extends State<DigitalPlusScreen> {
                 title: Text('${row['operator']} • ${rupiah(row['nominal'] as int)}'),
                 subtitle: Text('${row['destination']}\n${dateLabel('${row['created_at']}')} • ${row['status']}'),
                 isThreeLine: true, trailing: Text('+${rupiah(row['fee'] as int)}')))),
-          ])));
+          ]));
       }),
   );
 }
