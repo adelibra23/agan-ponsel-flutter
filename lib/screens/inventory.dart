@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import '../services/product_photos.dart';
 import '../widgets/product_photo.dart';
 import 'barcode_scanner.dart';
+import 'store_finance_plus.dart';
 import '../core/database.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
@@ -69,6 +70,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
         child: ListView(key: const PageStorageKey('inventory-scroll'), padding: const EdgeInsets.fromLTRB(16, 20, 16, 85), children: [
           PageIntro(widget.lowOnly ? 'Stok Menipis' : 'Produk & Stok',
             'Kelola stok, kategori, modal dan harga jual'),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => const InventoryInsightScreen())),
+            icon: const Icon(Icons.inventory_2_outlined),
+            label: const Text('Insight Stok, Margin & Ekspor CSV')),
+          const SizedBox(height: 12),
           Row(children: [
             Expanded(child: SearchBox(hint: 'Cari produk / barcode...',
               onChanged: (v) => setState(() => search = v))),

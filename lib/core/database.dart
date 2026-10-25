@@ -90,7 +90,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'agan_ponsel_v1.db');
     return openDatabase(
       path,
-      version: 14,
+      version: 15,
       onCreate: (db, version) async {
         await _createBase(db);
         await _createNew(db);
@@ -105,6 +105,7 @@ class AppDatabase {
         await _createExpensesV12(db);
         await _createExpensesV13(db);
         await _createRestockV14(db);
+        await _createOperationsV15(db);
       },
       // Menolong instalasi yang sebelumnya memiliki migrasi parsial.
       onOpen: (db) async {
@@ -122,6 +123,7 @@ class AppDatabase {
         await _createExpensesV12(db);
         await _createExpensesV13(db);
         await _createRestockV14(db);
+        await _createOperationsV15(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -164,8 +166,56 @@ class AppDatabase {
         if (oldVersion < 14) {
           await _createRestockV14(db);
         }
+        if (oldVersion < 15) {
+          await _createOperationsV15(db);
+        }
       },
     );
+  }
+
+  /// v15: notes metadata, digital status + audit. Additive only.
+  static Future<void> _createOperationsV15(DatabaseExecutor db) async {
+    final noteColumns = (await db.rawQuery('PRAGMA table_info(store_notes)'))
+        .map((r) => r['name'] as String).toSet();
+    const noteFields = <String, String>{
+      'category': "TEXT NOT NULL DEFAULT 'Umum'",
+      'priority': "TEXT NOT NULL DEFAULT 'Normal'",
+      'due_at': "TEXT NOT NULL DEFAULT ''",
+      'pinned': 'INTEGER NOT NULL DEFAULT 0',
+      'updated_at': "TEXT NOT NULL DEFAULT ''",
+    };
+    for (final e in noteFields.entries) {
+      if (!noteColumns.contains(e.key)) {
+        await db.execute('ALTER TABLE store_notes ADD COLUMN ${e.key} ${e.value}');
+      }
+    }
+    final digitalColumns = (await db.rawQuery('PRAGMA table_info(digital_transactions)'))
+        .map((r) => r['name'] as String).toSet();
+    const digitalFields = <String, String>{
+      'status': "TEXT NOT NULL DEFAULT 'Selesai'",
+      'note': "TEXT NOT NULL DEFAULT ''",
+      'reference_code': "TEXT NOT NULL DEFAULT ''",
+      'payment_method': "TEXT NOT NULL DEFAULT 'Tunai'",
+    };
+    for (final e in digitalFields.entries) {
+      if (!digitalColumns.contains(e.key)) {
+        await db.execute('ALTER TABLE digital_transactions ADD COLUMN ${e.key} ${e.value}');
+      }
+    }
+    await db.execute('''CREATE TABLE IF NOT EXISTS digital_events(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transaction_id INTEGER NOT NULL,
+      old_status TEXT NOT NULL,
+      new_status TEXT NOT NULL,
+      old_note TEXT NOT NULL DEFAULT '',
+      new_note TEXT NOT NULL DEFAULT '',
+      old_reference TEXT NOT NULL DEFAULT '',
+      new_reference TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(transaction_id) REFERENCES digital_transactions(id)
+    )''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_digital_events_parent '
+      'ON digital_events(transaction_id)');
   }
 
   // AGAN_PONSEL_RESTOCK_V14
@@ -664,7 +714,14 @@ class AppDatabase {
     ''');
     final newGross = (lines.first['gross'] as num).toInt();
     final discounts = await aggregate('receipts', 'discount');
-    final fees = await aggregate('digital_transactions', 'fee');
+    // Pending and failed digital transactions do not earn an admin fee.
+    // Existing v14 transactions migrate with status 'Selesai'.
+    final feeQuery = todayOnly
+      ? "SELECT COALESCE(SUM(fee),0) AS n FROM digital_transactions WHERE status='Selesai' AND created_at LIKE ?"
+      : "SELECT COALESCE(SUM(fee),0) AS n FROM digital_transactions WHERE status='Selesai'";
+    final feeRows = await d.rawQuery(feeQuery,
+      todayOnly ? <Object?>['${todayKey()}%'] : <Object?>[]);
+    final fees = (feeRows.first['n'] as num).toInt();
     final expense = await aggregate('expenses', 'amount');
     final legacyCount = Sqflite.firstIntValue(await d.rawQuery('SELECT COUNT(*) FROM sales$filter')) ?? 0;
     final receiptCount = Sqflite.firstIntValue(await d.rawQuery('SELECT COUNT(*) FROM receipts$filter')) ?? 0;

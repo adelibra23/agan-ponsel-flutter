@@ -1,7 +1,7 @@
 from pathlib import Path
 checks = {
  'lib/core/database.dart': [
-   'version: 14','if (oldVersion < 13)','_createExpensesV13',
+   'version: 15','if (oldVersion < 13)','_createExpensesV13',
    'unit_price','quantity','merchant','reference_code','icon_key','color_value',
  ],
  'lib/services/expenses_service.dart': [
@@ -13,7 +13,7 @@ checks = {
    'showExpenseCategoryEditor','Pilih warna','Pilih ikon','No. nota / referensi',
  ],
  'lib/services/backup_service.dart': [
-   "'databaseVersion': 14",'10, 11, 12, 13',"'expense_categories'","'expense_audit'",
+   "'databaseVersion': 15",'10, 11, 12, 13',"'expense_categories'","'expense_audit'",
  ],
  'pubspec.yaml': ['shared_preferences_android: 2.4.28'],
  '.github/workflows/build-apk.yml': ['scripts/smoke_expenses_v13.py','Test WhatsApp Agent Webhook'],

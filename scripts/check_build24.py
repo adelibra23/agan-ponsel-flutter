@@ -3,8 +3,8 @@ from pathlib import Path
 required = {
   'lib/services/expenses_service.dart':['class ExpensesService','static Future<void> edit','expense_audit'],
   'lib/screens/expenses_v2.dart':['class ExpensesManagementScreen','class ExpenseEditorPage','class ExpenseCategoriesPage','exportCsv'],
-  'lib/core/database.dart':['version: 14','_createExpensesV12','expense_categories','expense_audit'],
-  'lib/services/backup_service.dart':["'expense_categories'", "'expense_audit'", "'app_font_family'", "'databaseVersion': 14"],
+  'lib/core/database.dart':['version: 15','_createExpensesV12','expense_categories','expense_audit'],
+  'lib/services/backup_service.dart':["'expense_categories'", "'expense_audit'", "'app_font_family'", "'databaseVersion': 15"],
   'lib/screens/others.dart':['class ExpensesScreen extends StatelessWidget','expenses_v2.dart','Google Drive Otomatis','Alarm Jatuh Tempo'],
   'lib/core/theme.dart':['Rose Quartz','Graphite','aganFontFamily','appFontChoices'],
   'lib/main.dart':['aganFontFamily.addListener','app_font_family','BackgroundJobs.init()'],

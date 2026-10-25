@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'contact_picker.dart';
 import 'inventory.dart';
 import 'restock_center.dart';
+import 'digital_plus.dart';
+import 'store_finance_plus.dart';
 import 'cash_screen.dart';
 import 'expenses_v2.dart';
 import 'store_notes.dart';
@@ -58,7 +60,7 @@ class MoreScreen extends StatelessWidget {
       _MenuItem(icon: Icons.account_balance_wallet_rounded, color: const Color(0xFF1F68D7),
         title: 'Saldo & Kas Toko', subtitle: 'Saldo kas, setoran dan penarikan manual', onTap: () => open(const CashScreen())),
       _MenuItem(icon: Icons.task_alt_rounded, color: const Color(0xFF4B78A8),
-        title: 'Catatan & Tugas', subtitle: 'Checklist kegiatan toko', onTap: () => open(const StoreNotesScreen())),
+        title: 'Catatan & Tugas', subtitle: 'Edit, kategori, tenggat dan bagikan', onTap: () => open(const StoreNotesScreen())),
       _MenuItem(icon: Icons.notification_important_outlined, color: const Color(0xFFDD8517),
         title: 'Stok Menipis', subtitle: 'Pantau produk di bawah batas minimum',
         onTap: () => open(const InventoryScreen(lowOnly: true))),
@@ -67,7 +69,7 @@ class MoreScreen extends StatelessWidget {
         subtitle: 'Rencana belanja, kontak pemasok dan konfirmasi barang masuk',
         onTap: () => open(const RestockCenterScreen())),
       _MenuItem(icon: Icons.sim_card_rounded, color: const Color(0xFF0D87CF),
-        title: 'Pulsa & Transaksi Digital', subtitle: 'Catat paket data, top up, admin', onTap: () => open(const DigitalScreen())),
+        title: 'Pulsa & Transaksi Digital', subtitle: 'Status, nomor referensi dan riwayat', onTap: () => open(const DigitalScreen())),
       _MenuItem(icon: Icons.payments_rounded, color: const Color(0xFFE76655),
         title: 'Pengeluaran', subtitle: 'Biaya operasional toko', onTap: () => open(const ExpensesScreen())),
       _MenuItem(icon: Icons.insights_rounded, color: const Color(0xFF289779),
@@ -253,97 +255,11 @@ class ExpensesScreen extends StatelessWidget {
   Widget build(BuildContext context) => const ExpensesManagementScreen();
 }
 
-class DigitalScreen extends StatefulWidget {
+/// Compatibility entrypoint: existing menu routes still work.
+class DigitalScreen extends StatelessWidget {
   const DigitalScreen({super.key});
   @override
-  State<DigitalScreen> createState() => _DigitalScreenState();
-}
-
-class _DigitalScreenState extends State<DigitalScreen> {
-  late Future<List<Map<String, Object?>>> loader;
-  @override
-  void initState() { super.initState(); refresh(); }
-  void refresh() => setState(() => loader = AppDatabase.instance.then((d) => d.query('digital_transactions', orderBy: 'id DESC')));
-  Future<void> add() async {
-    final destination = TextEditingController();
-    final nominal = TextEditingController();
-    final fee = TextEditingController(text: '5000');
-    String operator = 'Telkomsel';
-    final result = await showAppSheet<(String, String, int, int)>(context,
-      StatefulBuilder(builder: (ctx, update) => Column(
-        mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('Transaksi Digital', style: Theme.of(ctx).textTheme.titleLarge),
-          const SizedBox(height: 6),
-          Text('Pencatatan saja, tidak mengirim pulsa / uang otomatis.',
-            style: TextStyle(fontSize: 12, color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(value: operator,
-            decoration: inputDecoration('Jenis layanan'),
-            items: ['Telkomsel', 'XL', 'Indosat', 'Tri', 'Smartfren', 'Axis',
-              'Transfer Bank', 'Tarik Tunai', 'E-Wallet', 'Token PLN', 'Lainnya']
-              .map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-            onChanged: (v) { if (v != null) update(() => operator = v); }),
-          const SizedBox(height: 10),
-          TextField(controller: destination, decoration: inputDecoration('Nomor tujuan / pelanggan')),
-          const SizedBox(height: 10),
-          TextField(controller: nominal, keyboardType: TextInputType.number,
-            decoration: inputDecoration('Nominal transaksi (Rp)')),
-          const SizedBox(height: 10),
-          TextField(controller: fee, keyboardType: TextInputType.number,
-            decoration: inputDecoration('Biaya admin (Rp)')),
-          const SizedBox(height: 18),
-          FilledButton(onPressed: () {
-            final n = nonNegative(nominal.text);
-            final f = nonNegative(fee.text);
-            if (destination.text.trim().isEmpty || n == null || f == null) {
-              notify(ctx, 'Lengkapi tujuan, nominal dan biaya admin'); return;
-            }
-            Navigator.pop(ctx, (operator, destination.text.trim(), n, f));
-          }, child: const Text('Catat Transaksi')),
-        ],
-      )));
-    if (result != null) {
-      await (await AppDatabase.instance).insert('digital_transactions', {
-        'operator': result.$1, 'destination': result.$2,
-        'nominal': result.$3, 'fee': result.$4,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-      if (mounted) refresh();
-    }
-    destination.dispose(); nominal.dispose(); fee.dispose();
-  }
-  @override
-  Widget build(BuildContext context) => StorePage(title: 'Pulsa & Digital',
-    action: IconButton(onPressed: add, icon: const Icon(Icons.add_rounded)),
-    child: FutureBuilder<List<Map<String, Object?>>>(future: loader, builder: (ctx, snap) {
-      if (snap.hasError) return EmptyView(icon: Icons.error_outline, title: 'Gagal membaca transaksi', subtitle: '${snap.error}');
-      if (!snap.hasData) return const ScreenLoading();
-      final data = snap.data!;
-      return ListView(key: const PageStorageKey('digital-list-scroll'), padding: const EdgeInsets.all(16), children: [
-        Surface(child: Row(children: [
-          const Icon(Icons.info_outline_rounded, color: brandBlue),
-          const SizedBox(width: 10),
-          Expanded(child: Text('Pencatatan transaksi. Transfer dan top up sungguhan memerlukan penyedia layanan.',
-            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))),
-        ])),
-        const SizedBox(height: 16),
-        if (data.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 90),
-          child: EmptyView(icon: Icons.sim_card_outlined, title: 'Belum ada transaksi digital',
-            subtitle: 'Tekan + untuk mencatat pembayaran admin.')),
-        for (final row in data) ...[
-          Surface(child: ListTile(contentPadding: EdgeInsets.zero,
-            leading: const CircleAvatar(child: Icon(Icons.phone_android_rounded)),
-            title: Text('${row['operator']} • ${rupiah(row['nominal'] as int)}',
-              style: const TextStyle(fontWeight: FontWeight.w800)),
-            subtitle: Text('${row['destination']}\n${dateLabel(row['created_at'] as String)}'),
-            isThreeLine: true,
-            trailing: Text('+${rupiah(row['fee'] as int)}',
-              style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF09A875))))),
-          const SizedBox(height: 9),
-        ],
-      ]);
-    }),
-  );
+  Widget build(BuildContext context) => const DigitalPlusScreen();
 }
 
 class ReportsScreen extends StatefulWidget {
@@ -362,6 +278,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (!snap.hasData) return const ScreenLoading();
         final v = snap.data!;
         return ListView(key: const PageStorageKey('reports-scroll'), padding: const EdgeInsets.all(16), children: [
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => const FinanceReportScreen())),
+            icon: const Icon(Icons.date_range_outlined),
+            label: const Text('Laporan Periode & Ekspor CSV')),
+          const SizedBox(height: 14),
           SegmentedButton<bool>(segments: const [
             ButtonSegment(value: true, label: Text('Hari ini'), icon: Icon(Icons.today)),
             ButtonSegment(value: false, label: Text('Semua waktu'), icon: Icon(Icons.calendar_month)),

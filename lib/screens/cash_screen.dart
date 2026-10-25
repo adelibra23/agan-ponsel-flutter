@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/database.dart';
+import 'store_finance_plus.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
 import '../widgets/kit.dart';
@@ -189,6 +190,10 @@ class _CashScreenState extends State<CashScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Dompet Kas Toko'), actions: [
+      IconButton(tooltip: 'Analisis kas & ekspor CSV',
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const CashInsightsScreen())),
+        icon: const Icon(Icons.assessment_outlined)),
       IconButton(tooltip: 'Atur target omzet', onPressed: setDailyTarget,
         icon: const Icon(Icons.flag_outlined)),
     ]),
