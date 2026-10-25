@@ -47,7 +47,11 @@ checks = {
 for path, markers in checks.items():
     text = Path(path).read_text()
     for marker in markers:
-        assert marker in text, f'{path} missing {marker!r}'
+        # BUILD28_FORMAT_STABLE_MARKERS: dart format may insert line breaks
+        # in member-access chains (SharePlus.instance.share) and arguments.
+        # Preserve every required marker, but ignore formatting whitespace.
+        compact = lambda value: re.sub(r'\s+', '', value)
+        assert compact(marker) in compact(text), f'{path} missing {marker!r}'
 
 db = Path('lib/core/database.dart').read_text()
 assert db.count('await _createOperationsV15(db);') == 3
