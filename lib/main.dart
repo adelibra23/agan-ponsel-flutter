@@ -191,13 +191,27 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin {
+  // BUILD31_TAB_CONTENT_MOTION: animate content without rebuilding tab state.
+  late final AnimationController _tabMotion = AnimationController(
+    vsync: this, duration: const Duration(milliseconds: 320), value: 1);
+  bool _tabMovesForward = true;
+
+  @override
+  void dispose() {
+    _tabMotion.dispose();
+    super.dispose();
+  }
+
   int selected = 0;
   int refresh = 0;
   static const titles = ['Beranda', 'Kasir', 'Produk & Stok', 'Service HP', 'Menu Lainnya'];
   // Keep all tab widgets mounted; switching tabs must not recreate their states.
   void select(int tab) {
-    if (tab != selected) setState(() => selected = tab);
+    if (tab < 0 || tab >= titles.length || tab == selected) return;
+    _tabMovesForward = tab > selected;
+    setState(() => selected = tab);
+    _tabMotion.forward(from: 0);
   }
   void open(Widget page) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => page));
@@ -252,7 +266,24 @@ class _AppShellState extends State<AppShell> {
           ),
           // IndexedStack retains every tab State and its scroll position.
           // Transition of the bottom bar remains animated independently.
-          Expanded(child: IndexedStack(index: selected, children: pages)),
+          Expanded(child: AnimatedBuilder(
+            animation: _tabMotion,
+            child: IndexedStack(index: selected, children: pages),
+            builder: (context, child) {
+              final progress = Curves.easeOutCubic.transform(_tabMotion.value);
+              final direction = _tabMovesForward ? 1.0 : -1.0;
+              return Opacity(
+                opacity: .83 + .17 * progress,
+                child: Transform.translate(
+                  offset: Offset(18 * direction * (1 - progress), 0),
+                  child: Transform.scale(
+                    scale: .985 + .015 * progress,
+                    child: child,
+                  ),
+                ),
+              );
+            },
+          )),
           AnimatedBottomBar(index: selected, onSelected: select),
         ])),
       ),

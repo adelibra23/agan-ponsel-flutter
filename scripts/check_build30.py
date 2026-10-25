@@ -33,15 +33,15 @@ required = {
   ],
   'lib/screens/others.dart': ['ReminderCenterScreen()', 'PinSettingsScreen()',
     "title: 'Alarm Jatuh Tempo'"],
-  'pubspec.yaml': ['version: 2.0.0+30', 'local_auth: ^2.3.0',
+  'pubspec.yaml': ['version: 2.1.0+31', 'local_auth: ^2.3.0',
     'shared_preferences_android: 2.4.28'],
   '.github/workflows/build-apk.yml': [
-    'AGAN-PONSEL-v2.0.0-Build30-APK',
+    'AGAN-PONSEL-v2.1.0-Build31-APK',
     'scripts/check_build30.py', 'scripts/smoke_build30_privacy.py',
     'test/build30_ui_security_test.dart', 'Test WhatsApp Agent Webhook',
   ],
-  'scripts/check_build29.py': ['version: 2.0.0+30',
-    'AGAN-PONSEL-v2.0.0-Build30-APK'],
+  'scripts/check_build29.py': ['version: 2.1.0+31',
+    'AGAN-PONSEL-v2.1.0-Build31-APK'],
 }
 for name, needles in required.items():
     path = root / name

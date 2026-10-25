@@ -35,6 +35,11 @@ class BackupService {
   static const profileKeys = <String>[
     'local_owner_name', 'local_owner_phone', 'local_owner_email',
     'local_shop_name', 'local_shop_address', 'local_receipt_footer',
+    // Public store contact, about text and opening hours; no PIN/face data.
+    'local_shop_about', 'local_shop_hours',
+    'local_shop_contact_phone', 'local_shop_contact_whatsapp',
+    'local_shop_contact_email', 'local_shop_instagram',
+    'local_shop_website',
     'daily_sales_target', 'app_template_style', 'app_font_family', 'reminder_message_template',
     'expense_budget_settings',
     'cash_card_style', 'cash_card_density',

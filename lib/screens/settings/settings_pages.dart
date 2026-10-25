@@ -10,6 +10,7 @@ import '../../services/backup_service.dart';
 import '../../services/printer_service.dart';
 import '../../services/store_brand.dart';
 import '../../widgets/store_logo.dart';
+import 'about_store.dart';
 import '../../widgets/kit.dart';
 
 class SettingsCard extends StatelessWidget {
@@ -450,72 +451,12 @@ class _DatabaseInfoScreenState extends State<DatabaseInfoScreen> {
     }));
 }
 
+// BUILD31_ABOUT_WRAPPER — preserve previous route API for Menu and Settings.
 class AboutAganScreen extends StatelessWidget {
   const AboutAganScreen({super.key});
   @override
-  Widget build(BuildContext context) => SettingsPageLayout(title: 'Tentang Aplikasi',
-    child: ListView(padding: const EdgeInsets.all(16), children: [
-      Container(padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 18),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(28),
-          gradient: const LinearGradient(colors: [Color(0xFF0736B1), Color(0xFF159DEB)])),
-        child: Column(children: [
-          const StoreLogo(size: 84),
-          SizedBox(height: 15),
-          Text('AGAN PONSEL', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: Colors.white)),
-          SizedBox(height: 5),
-          Text('Flutter • v1.1.0 Build 21', style: TextStyle(color: Colors.white70)),
-          SizedBox(height: 8),
-          Text('Operasional toko, kasir, dan service HP dalam satu aplikasi',
-            style: TextStyle(color: Colors.white, fontSize: 12), textAlign: TextAlign.center),
-        ])),
-      const SizedBox(height: 18),
-      const SectionTitle('Tentang versi ini'),
-      Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Dirancang untuk bekerja tanpa server komputer.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w800, fontSize: 14)),
-        const SizedBox(height: 12),
-        for (final feature in const [
-          'Kasir dan manajemen stok SQLite lokal',
-          'Tiket service multi-tab dan timeline pengerjaan',
-          'Backup & Restore SQLite dan foto produk ke JSON',
-          'Scan barcode produk dengan kamera (offline)',
-          'Foto produk di Kasir dan Inventaris',
-          'Kunci aplikasi dengan PIN dan biometrik Android',
-          'Impor pelanggan yang dipilih dari kontak HP',
-          'Logo toko kustom dan saldo kas privat',
-          'Catatan tugas dan target omzet harian',
-          'Piutang, cicilan, pusat pengingat jatuh tempo',
-          'Template warna aplikasi dan pesan penagihan',
-          'Splash AG Orbit Holographic dengan gerak 3D',
-          'AGANA AI dengan API key pribadi, model gratis sesuai penyedia',
-          'API key AI tidak dicadangkan; data toko tidak dikirim otomatis ke penyedia AI',
-          'Printer thermal Bluetooth ESC/POS 58/80 mm',
-          'Profil akun pengelola dan identitas toko lokal',
-          'Laporan, transaksi digital dan riwayat penjualan',
-        ]) Padding(padding: const EdgeInsets.only(bottom: 9), child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(Icons.check_circle_rounded, size: 15,
-              color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 9),
-            Expanded(child: Text(feature, style: TextStyle(
-              fontSize: 12.7, height: 1.35,
-              color: Theme.of(context).colorScheme.onSurfaceVariant))),
-          ])),
-      ])),
-      const SizedBox(height: 14),
-      Surface(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Pemberitahuan', style: TextStyle(fontWeight: FontWeight.w900)),
-        const SizedBox(height: 8),
-        Text('AGAN PONSEL adalah alat pencatatan toko. Top up, transfer bank, OTP dan WhatsApp otomatis tidak diproses oleh aplikasi offline ini.',
-          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 10),
-        Text('Backup tersimpan di lokasi yang dipilih pengguna. Menghapus aplikasi dapat menghapus database lokal jika belum dicadangkan.',
-          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-      ])),
-    ]));
+  Widget build(BuildContext context) => const AboutStoreScreen();
 }
-
 
 class StoreBrandSettingsScreen extends StatefulWidget {
   const StoreBrandSettingsScreen({super.key});

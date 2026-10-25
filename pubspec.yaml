@@ -1,7 +1,7 @@
 name: agan_ponsel
 description: AGAN PONSEL Android - dashboard, kasir, stok, service, laporan.
 publish_to: none
-version: 2.0.0+30
+version: 2.1.0+31
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -12,6 +12,7 @@ dependencies:
   sqflite: ^2.4.2
   path: ^1.9.1
   shared_preferences: ^2.5.3
+  package_info_plus: ^8.3.1
   flutter_local_notifications: ^20.1.0
   workmanager: ^0.10.10
   google_sign_in: ^7.2.0
