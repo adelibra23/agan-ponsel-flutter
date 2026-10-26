@@ -244,9 +244,11 @@ class _AboutStoreScreenState extends State<AboutStoreScreen> {
                             SizedBox(height: 7),
                             Text('Kelola penjualan, produk, service, piutang, '
                               'pengeluaran, laporan dan stok dalam satu aplikasi. '
-                              'Data transaksi utama tersimpan di perangkat. '
-                              'Fitur backup Google Drive serta AGANA online '
-                              'memerlukan konfigurasi dan akses internet.',
+                              'Pencatatan utama dapat digunakan secara offline '
+                              'dan data transaksi tersimpan lokal di perangkat. '
+                              'Backup Google Drive, AGANA berbasis API, dan '
+                              'layanan WhatsApp memerlukan akses internet '
+                              'serta pengaturan yang sesuai.',
                               style: TextStyle(height: 1.45)),
                             SizedBox(height: 9),
                             Text('Kunci PIN dan biometrik membatasi akses layar, '
