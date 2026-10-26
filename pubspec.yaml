@@ -12,7 +12,7 @@ dependencies:
   sqflite: ^2.4.2
   path: ^1.9.1
   shared_preferences: ^2.5.3
-  package_info_plus: ^8.3.1
+  package_info_plus: ^10.2.2
   flutter_local_notifications: ^20.1.0
   workmanager: ^0.10.10
   google_sign_in: ^7.2.0

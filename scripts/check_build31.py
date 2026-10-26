@@ -39,7 +39,7 @@ checks = {
         "'databaseVersion': 15", "'cash_card_style'",
     ],
     'pubspec.yaml': [
-        'version: 2.1.0+31', 'package_info_plus: ^8.3.1',
+        'version: 2.1.0+31', 'package_info_plus: ^10.2.2',
         'shared_preferences_android: 2.4.28',
     ],
     '.github/workflows/build-apk.yml': [
